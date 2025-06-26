@@ -15,4 +15,5 @@ build/
 # wandb
 wandb/
 
-# local‐mode outputs
+# datasets
+data/

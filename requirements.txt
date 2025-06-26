@@ -1,1 +1,6 @@
 ipykernel
+praw
+pandas
+beautifulsoup4 
+lxml
+python-dotenv
