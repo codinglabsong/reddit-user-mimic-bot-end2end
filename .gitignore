@@ -1,0 +1,18 @@
+# Byte‐compiled / optimized / DLL files / .cache / .egg-info / setup
+__pycache__/
+*.py[cod]
+*$py.class
+.cache
+.pytest_cache
+.ruff_cache
+*.egg-info/
+build/
+.gradio
+
+# secrets
+.env
+
+# wandb
+wandb/
+
+# local‐mode outputs
