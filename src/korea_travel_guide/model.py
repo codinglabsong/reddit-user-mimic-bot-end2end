@@ -32,7 +32,7 @@ def build_peft_model(
     return lora_model
 
 
-def build_inference_peft_model(
+def load_peft_model_for_inference(
     base_model: BartForConditionalGeneration,
     adapter_path: str = "outputs/bart-base-korea-travel-guide-lora",
 ) -> PeftModel:
