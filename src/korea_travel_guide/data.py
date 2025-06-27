@@ -3,11 +3,11 @@ import re
 import time
 import prawcore
 from bs4 import BeautifulSoup
-from datasets import load_dataset, DatasetDict
+from datasets import DatasetDict
 from pathlib import Path
 from praw import Reddit
 from transformers import AutoTokenizer
-from typing import Union
+from typing import Union, Tuple
 
 
 def init_reddit() -> None:
@@ -141,8 +141,8 @@ def tokenize_and_format(
     max_target_length : int = 256,
 ) -> Tuple[DatasetDict, AutoTokenizer]:
     tok = AutoTokenizer.from_pretrained(checkpoint)
-      
-    def _tokenize_and_rename(examples):
+    
+    def _preprocess_batch(examples):
         # tokenize inputs
         model_inputs = tok(
             examples["question"],
@@ -156,11 +156,12 @@ def tokenize_and_format(
                 max_length=max_target_length,
                 truncation=True
             )
+
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs
 
     ds_tok = ds.map(
-        _tokenize_and_rename, 
+        _preprocess_batch, 
         batched=True,
         remove_columns=ds["train"].column_names # remove uneeded columnns to save memory and efficiency
     )
