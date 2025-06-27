@@ -3,8 +3,10 @@ import re
 import time
 import prawcore
 from bs4 import BeautifulSoup
+from datasets import load_dataset, DatasetDict
 from pathlib import Path
 from praw import Reddit
+from transformers import AutoTokenizer
 from typing import Union
 
 
@@ -15,6 +17,7 @@ def init_reddit() -> None:
         user_agent=os.environ["REDDIT_USER_AGENT"],
     )
 
+
 def clean_text(txt: str) -> str:
     # strip HTML/Markdown
     txt = BeautifulSoup(txt, "html.parser").get_text()
@@ -23,6 +26,7 @@ def clean_text(txt: str) -> str:
     # collapse whitespace
     txt = re.sub(r"\s+", " ", txt).strip()
     return txt
+
 
 def scrape(sub_size_map):
     reddit = init_reddit()
@@ -91,6 +95,7 @@ def scrape(sub_size_map):
     
     return qa
 
+
 def preprocess(qa_raw):
     cleaned = []
     for item in qa_raw:
@@ -104,6 +109,7 @@ def preprocess(qa_raw):
             "url": item["url"],
         })
     return cleaned
+
 
 def split_and_save(df, out_dir: Union[str, Path]):
     # create the dir path if not existing
@@ -126,3 +132,39 @@ def split_and_save(df, out_dir: Union[str, Path]):
         path = os.path.join(out_dir, f"{name}.csv")
         split_df.to_csv(path, index=False)
         print(f"Saved {name} set: {len(split_df)} examples -> {path}")
+
+
+def tokenize_and_format(
+    ds: DatasetDict,
+    checkpoint: str = "facebook/bart-base",
+    max_input_length: int = 1024,
+    max_target_length : int = 256,
+) -> Tuple[DatasetDict, AutoTokenizer]:
+    tok = AutoTokenizer.from_pretrained(checkpoint)
+      
+    def _tokenize_and_rename(examples):
+        # tokenize inputs
+        model_inputs = tok(
+            examples["question"],
+            max_length=max_input_length,
+            truncation=True
+        )
+        # tokenize targets in “target” mode
+        with tok.as_target_tokenizer():
+            labels = tok(
+                examples["answer"],
+                max_length=max_target_length,
+                truncation=True
+            )
+        model_inputs["labels"] = labels["input_ids"]
+        return model_inputs
+
+    ds_tok = ds.map(
+        _tokenize_and_rename, 
+        batched=True,
+        remove_columns=ds["train"].column_names # remove uneeded columnns to save memory and efficiency
+    )
+    
+    # making sure that downstream Trainer sees torch tensors
+    ds_tok.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
+    return ds_tok, tok

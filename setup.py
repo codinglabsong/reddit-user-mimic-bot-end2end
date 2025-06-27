@@ -6,9 +6,9 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
-        # "transformers",
-        # "datasets",
-        # "peft",
+        "transformers",
+        "datasets",
+        "peft",
         # "evaluate",
         "python-dotenv",
         # "numpy",
@@ -20,5 +20,6 @@ setup(
         "pandas",
         "beautifulsoup4",
         "lxml",
+        "huggingface_hub",
     ],
 )

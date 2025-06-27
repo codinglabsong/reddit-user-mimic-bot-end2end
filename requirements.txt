@@ -4,3 +4,7 @@ pandas
 beautifulsoup4 
 lxml
 python-dotenv
+huggingface_hub
+transformers
+peft
+datasets
