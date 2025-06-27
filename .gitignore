@@ -16,4 +16,5 @@ build/
 wandb/
 
 # datasets
-data/
+data/processed/
+data/raw/
