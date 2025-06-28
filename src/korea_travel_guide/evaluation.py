@@ -1,5 +1,5 @@
 import numpy as np                             
-import evaluate                                
+import evaluate                            
 from transformers import EvalPrediction        
 
 

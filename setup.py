@@ -21,5 +21,9 @@ setup(
         "beautifulsoup4",
         "lxml",
         "huggingface_hub",
+        "nltk",
+        "absl-py",
+        "rouge-score",
+        "bert_score"
     ],
 )

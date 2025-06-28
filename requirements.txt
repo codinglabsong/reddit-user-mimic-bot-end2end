@@ -11,3 +11,7 @@ datasets
 numpy
 wandb
 evaluate
+nltk 
+absl-py
+rouge-score
+bert_score

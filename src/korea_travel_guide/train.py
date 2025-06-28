@@ -10,12 +10,13 @@ from transformers import (
     DataCollatorForSeq2Seq,
     Seq2SeqTrainer,
     TrainingArguments,
+    Seq2SeqTrainingArguments
 )
 from pathlib import Path
 from korea_travel_guide.utils import load_environ_vars, print_trainable_parameters
 from korea_travel_guide.model import build_base_model, build_peft_model
 from korea_travel_guide.data import tokenize_and_format
-from korea_travel_guide.evaluate import build_compute_metrics
+from korea_travel_guide.evaluation import build_compute_metrics
 from uuid import uuid4
 
 
@@ -42,18 +43,18 @@ def parse_args() -> argparse.Namespace:
         help="Initial learning rate for optimizer.",
     )
     p.add_argument(
-        "--num_train_epochs", type=int, default=4, help="Number of training epochs."
+        "--num_train_epochs", type=int, default=1, help="Number of training epochs."
     )
     p.add_argument(
         "--train_batch_size",
         type=int,
-        default=16,
+        default=8,
         help="Batch size per device during training.",
     )
     p.add_argument(
         "--eval_batch_size",
         type=int,
-        default=32,
+        default=16,
         help="Batch size per device during evaluation.",
     )
     p.add_argument(
@@ -69,6 +70,11 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="outputs/bart-base-korea-travel-guide-lora",
         help="Output directory / model identifier prefix.",
+    )
+    p.add_argument(
+        "--train_sample",
+        action="store_true",
+        help="If set, use the sample training datset for smoke tests.",
     )
     p.add_argument(
         "--push_to_hub",
@@ -127,13 +133,19 @@ def main() -> None:
     project_root = current_path.parent.parent.parent
     
     # load CSVs
+    data_files = {
+        "train": str(
+            project_root 
+            / "data/processed"
+            / ("train_sample.csv" if cfg.train_sample else "train.csv")
+        ),
+        "validation": str(project_root / "data/processed/val.csv"),
+        "test":       str(project_root / "data/processed/test.csv"),
+    }
+    
     ds = load_dataset(
         "csv",
-        data_files={
-        "train": str(project_root / "data/processed/train.csv"),
-        "validation": str(project_root / "data/processed/val.csv"),
-        "test": str(project_root / "data/processed/test.csv"),
-        }
+        data_files=data_files
     )
     ds_tok, tok = tokenize_and_format(ds)
     
@@ -163,6 +175,7 @@ def main() -> None:
         weight_decay=0.01,
         save_total_limit=2,
         fp16=True,
+        predict_with_generate=True,  # essential for cusstom metrics
         push_to_hub=cfg.push_to_hub,
         report_to="wandb",
         run_name=f"guide-{uuid4().hex[:8]}",
@@ -185,7 +198,6 @@ def main() -> None:
         tokenizer=tok,
         data_collator=data_collator,
         compute_metrics=build_compute_metrics(tok),
-        predict_with_generate=True,  # <- essential for cusstom metrics
     )
 
     trainer.train()
