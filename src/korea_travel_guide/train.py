@@ -4,10 +4,20 @@ import random
 import numpy as np
 import torch
 import os
+import wandb
+from datasets import load_dataset
+from transformers import (
+    DataCollatorForSeq2Seq,
+    Seq2SeqTrainer,
+    TrainingArguments,
+)
 from pathlib import Path
-from korea_travel_guide.utils import load_environ_vars
+from korea_travel_guide.utils import load_environ_vars, print_trainable_parameters
 from korea_travel_guide.model import build_base_model, build_peft_model
-from korea_travel_guide.utils import load_environ_vars
+from korea_travel_guide.data import tokenize_and_format
+from korea_travel_guide.evaluate import build_compute_metrics
+from uuid import uuid4
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +32,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--peft_rank",
         type=int,
-        default=32,
+        default=8,
         help="LoRA adapter rank (r) - controls adapter capacity.",
     )
     p.add_argument(
         "--learning_rate",
         type=float,
-        default=5e-4,
+        default=1e-4,
         help="Initial learning rate for optimizer.",
     )
     p.add_argument(
@@ -37,13 +47,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--train_batch_size",
         type=int,
-        default=128,
+        default=16,
         help="Batch size per device during training.",
     )
     p.add_argument(
         "--eval_batch_size",
         type=int,
-        default=256,
+        default=32,
         help="Batch size per device during evaluation.",
     )
     p.add_argument(
@@ -113,55 +123,96 @@ def main() -> None:
     
     # ---------- Data Preprocessing ----------
     # download and tokenize dataset
-    current_dir = Path().resolve()
-    project_root = current_dir.parent.parent
-    print(project_root)
+    current_path = Path(__file__).resolve()
+    project_root = current_path.parent.parent.parent
+    
+    # load CSVs
+    ds = load_dataset(
+        "csv",
+        data_files={
+        "train": str(project_root / "data/processed/train.csv"),
+        "validation": str(project_root / "data/processed/val.csv"),
+        "test": str(project_root / "data/processed/test.csv"),
+        }
+    )
+    ds_tok, tok = tokenize_and_format(ds)
+    
+    # initialize base model and LoRA
+    base_model = build_base_model()
+    logger.info(f"Base model trainable params:\n{print_trainable_parameters(base_model)}")
+    lora_model = build_peft_model(base_model, cfg.peft_rank)
+    logger.info(
+        f"LoRA model (peft_rank={cfg.peft_rank}) trainable params:\n{print_trainable_parameters(lora_model)}"
+    )
+    
+    # ---------- Train ----------
+    # setup trainer and train
+    training_args = Seq2SeqTrainingArguments(
+        output_dir=cfg.adapter_path,
+        eval_strategy="steps",
+        logging_steps=50,
+        save_strategy="epoch",
+        learning_rate=cfg.learning_rate,
+        lr_scheduler_type="linear",
+        warmup_ratio=cfg.warmup_ratio,
+        num_train_epochs=cfg.num_train_epochs,
+        per_device_train_batch_size=cfg.train_batch_size,
+        per_device_eval_batch_size=cfg.eval_batch_size,
+        max_grad_norm=0.5,
+        label_smoothing_factor=0.1,
+        weight_decay=0.01,
+        save_total_limit=2,
+        fp16=True,
+        push_to_hub=cfg.push_to_hub,
+        report_to="wandb",
+        run_name=f"guide-{uuid4().hex[:8]}",
+        label_names=["labels"],
+    )
+    
+    # data collator: dynamic padding per batch
+    data_collator = DataCollatorForSeq2Seq(
+        tok, model=lora_model, 
+        padding="longest",  # or "max_length"
+        label_pad_token_id=-100
+    )
 
-    import sys
-    sys.exit()
+    # initialize trainer & train
+    trainer = Seq2SeqTrainer(
+        model=lora_model,
+        args=training_args,
+        train_dataset=ds_tok["train"],
+        eval_dataset=ds_tok["validation"],
+        tokenizer=tok,
+        data_collator=data_collator,
+        compute_metrics=build_compute_metrics(tok),
+        predict_with_generate=True,  # <- essential for cusstom metrics
+    )
 
-    # # load CSVs
-    # ds = load_dataset(
-    #     "csv",
-    #     data_files={
-    #     "train":      "data/processed/train.csv",
-    #     "validation": "data/processed/val.csv",
-    #     "test":       "data/processed/test.csv",
-    #     }
-    # )
+    trainer.train()
+    
+    # ---------- Save, Test or Push ----------
+    # evaluate test
+    if cfg.do_test:
+        logger.info("Running final test-set evaluation...")
+        metrics = trainer.evaluate(ds_tok["test"])
+        logger.info(f"Test metrics:\n{metrics}")
+    else:
+        logger.info("Skipping test evaluation.")
 
-    # # data collator: dynamic padding per batch
-    #     tokenizer, model=model, 
-    #     padding="longest",  # or "max_length"
-    #     label_pad_token_id=-100
-    # )
+    # save model & tokenizer to output_dir
+    trainer.save_model()
+    logger.info("Saved LoRA model and tokenizer")
 
-    # # training arguments
-    # training_args = Seq2SeqTrainingArguments(
-    #     output_dir="outputs/bart-base-korea-lora",
-    #     per_device_train_batch_size=16,
-    #     per_device_eval_batch_size=32,
-    #     evaluation_strategy="epoch",
-    #     save_strategy="epoch",
-    #     logging_strategy="steps",
-    #     logging_steps=50,
-    #     num_train_epochs=5,
-    #     learning_rate=1e-4,
-    #     fp16=True,
-    # )
+    # push to hub
+    if cfg.push_to_hub:
+        logger.info("Pushing to Huggingface hub...")
+        trainer.push_to_hub(
+            repo_id=cfg.hf_hub_repo_id,
+            finetuned_from="facebook/bart-base",
+            commit_message="Finetuned from bart-base on reddit-1k",
+        )
 
-    # # initialize trainer & train
-    # trainer = Seq2SeqTrainer(
-    #     model=model,
-    #     args=training_args,
-    #     train_dataset=tokenized["train"],
-    #     eval_dataset=tokenized["validation"],
-    #     tokenizer=tokenizer,
-    #     data_collator=data_collator,
-    #     predict_with_generate=True,  # <-- essential for cusstom metrics
-    # )
-
-    # trainer.train()
+    wandb.finish()
     
 
 if __name__ == "__main__":
