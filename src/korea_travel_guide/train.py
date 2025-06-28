@@ -9,7 +9,6 @@ ds = load_dataset(
 )
 
 # data collator: dynamic padding per batch
-data_collator = DataCollatorForSeq2Seq(
     tokenizer, model=model, 
     padding="longest",  # or "max_length"
     label_pad_token_id=-100
@@ -37,6 +36,7 @@ trainer = Seq2SeqTrainer(
     eval_dataset=tokenized["validation"],
     tokenizer=tokenizer,
     data_collator=data_collator,
+    predict_with_generate=True,  # <-- essential for cusstom metrics
 )
 
 trainer.train()
