@@ -162,7 +162,7 @@ def main() -> None:
     training_args = Seq2SeqTrainingArguments(
         output_dir=cfg.adapter_path,
         eval_strategy="steps",
-        logging_steps=50,
+        logging_steps=5,
         save_strategy="epoch",
         learning_rate=cfg.learning_rate,
         lr_scheduler_type="linear",

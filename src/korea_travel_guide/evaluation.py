@@ -24,7 +24,7 @@ def build_compute_metrics(tok):
         # metrics
         rouge_l = rouge.compute(predictions=decoded_preds,
                                 references=decoded_labels,
-                                use_stemmer=True)["rougeL"].mid.fmeasure
+                                use_stemmer=True)["rougeL"]
         bleu_score = bleu.compute(
             predictions=decoded_preds,
             references=[[ref] for ref in decoded_labels]  # BLEU expects list-of-lists
@@ -37,7 +37,7 @@ def build_compute_metrics(tok):
 
         # round for nice logging
         return {
-            "rougeL": round(rouge_l, 4),
+            "rougeL": round(rouge_l * 100, 4),
             "bleu":   round(bleu_score, 4),
             "bertscore_f1": round(bert_f1, 4),
         }
