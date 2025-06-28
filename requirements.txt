@@ -8,3 +8,6 @@ huggingface_hub
 transformers
 peft
 datasets
+numpy
+wandb
+evaluate
