@@ -9,7 +9,7 @@ from datasets import load_dataset
 from transformers import (
     DataCollatorForSeq2Seq,
     Seq2SeqTrainer,
-    TrainingArguments,
+    Seq2SeqTrainingArguments,
     Seq2SeqTrainingArguments
 )
 from pathlib import Path
