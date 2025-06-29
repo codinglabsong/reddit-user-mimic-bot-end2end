@@ -43,18 +43,18 @@ def parse_args() -> argparse.Namespace:
         help="Initial learning rate for optimizer.",
     )
     p.add_argument(
-        "--num_train_epochs", type=int, default=1, help="Number of training epochs."
+        "--num_train_epochs", type=int, default=3, help="Number of training epochs."
     )
     p.add_argument(
         "--train_batch_size",
         type=int,
-        default=8,
+        default=16,
         help="Batch size per device during training.",
     )
     p.add_argument(
         "--eval_batch_size",
         type=int,
-        default=16,
+        default=32,
         help="Batch size per device during evaluation.",
     )
     p.add_argument(
@@ -161,9 +161,9 @@ def main() -> None:
     # setup trainer and train
     training_args = Seq2SeqTrainingArguments(
         output_dir=cfg.adapter_path,
-        eval_strategy="steps",
-        logging_steps=5,
+        eval_strategy="epoch",
         save_strategy="epoch",
+        logging_steps=5,
         learning_rate=cfg.learning_rate,
         lr_scheduler_type="linear",
         warmup_ratio=cfg.warmup_ratio,
