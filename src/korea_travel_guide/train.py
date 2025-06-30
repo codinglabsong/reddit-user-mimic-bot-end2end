@@ -72,8 +72,8 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     peft_rank: int = field(default=8, metadata={"help": "LoRA adapter rank (r)."})
     hf_hub_repo_id: str | None = None
     run_test: bool = field(
-        default=True,
-        metadata={"help": "If False, skip the test-split evaluation after training."},
+        default=False,
+        metadata={"help": "If True, run the test-split evaluation after training."},
     )
     use_flash_attention: bool = field(
         default=True, metadata={"help": "Whether to enable Flash Attention v1."}
@@ -151,6 +151,16 @@ def main() -> None:
     )
 
     # ---------- Train ----------
+    # toggle flash attention v1
+    if training_args.use_flash_attention:
+        logger.info("Using flash attention v1")
+        ctx = torch.backends.cuda.sdp_kernel(
+            enable_flash=True, enable_math=False, enable_mem_efficient=False
+        )
+    else:
+        logger.info("Skipping flash attention v1")
+        ctx = nullcontext()
+
     # data collator: dynamic padding per batch
     data_collator = DataCollatorForSeq2Seq(
         tok,
@@ -170,16 +180,6 @@ def main() -> None:
         compute_metrics=build_compute_metrics(tok),
     )
 
-    # flash attention v1
-    if training_args.use_flash_attention:
-        logger.info("Using flash attention v1")
-        ctx = torch.backends.cuda.sdp_kernel(
-            enable_flash=True, enable_math=False, enable_mem_efficient=False
-        )
-    else:
-        logger.info("Skipping flash attention v1")
-        ctx = nullcontext()
-
     with ctx:
         trainer.train()
 
@@ -187,7 +187,8 @@ def main() -> None:
     # evaluate test
     if training_args.run_test:
         logger.info("Running final test-set evaluation...")
-        metrics = trainer.evaluate(ds_tok["test"])
+        with ctx:
+            metrics = trainer.evaluate(ds_tok["test"])
         logger.info(f"Test metrics:\n{metrics}")
     else:
         logger.info("Skipping test evaluation.")
