@@ -25,6 +25,6 @@ setup(
         "absl-py",
         "rouge-score",
         "bert_score",
-        "optimum"
+        "optimum",
     ],
 )

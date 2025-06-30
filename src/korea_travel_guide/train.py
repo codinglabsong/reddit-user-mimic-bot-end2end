@@ -3,6 +3,7 @@ import random
 import numpy as np
 import torch
 import os
+from contextlib import nullcontext
 from datasets import load_dataset
 from dataclasses import dataclass, field
 from transformers import (
@@ -23,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 # data-loading toggles
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
 @dataclass
 class DataArgs:
     train_file: Path = PROJECT_ROOT / "data/processed/train.csv"
@@ -30,9 +33,9 @@ class DataArgs:
     test_file: Path = PROJECT_ROOT / "data/processed/test.csv"
     train_sample_file: Path = PROJECT_ROOT / "data/processed/train_sample.csv"
     train_sample: bool = field(
-        default=False,
-        metadata={"help": "Use the mini CSV for smoke tests if True."}
+        default=False, metadata={"help": "Use the mini CSV for smoke tests if True."}
     )
+
 
 # training & LoRA extras — extend HF’s own Seq2SeqTrainingArguments
 @dataclass
@@ -40,7 +43,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     # overriding the hf defaults
     output_dir: str = field(
         default="outputs/bart-base-korea-travel-guide-lora",
-        metadata={"help": "Prefix folder for all checkpoints/run logs."}
+        metadata={"help": "Prefix folder for all checkpoints/run logs."},
     )
     eval_strategy: str = "epoch"
     save_strategy: str = "epoch"
@@ -61,23 +64,23 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     report_to: str = "wandb"
     run_name: str = field(
         default_factory=lambda: f"guide-{uuid4().hex[:8]}",
-        metadata={"help": "W&B & HF run name."}
-    ) # run_name keeps sweeps tidy & makes single-GPU debugging easy
+        metadata={"help": "W&B & HF run name."},
+    )  # run_name keeps sweeps tidy & makes single-GPU debugging easy
     label_names: List[str] = field(default_factory=lambda: ["labels"])
-    
+
     # additional custom args
-    peft_rank: int = field(default=8,  metadata={"help": "LoRA adapter rank (r)."})
+    peft_rank: int = field(default=8, metadata={"help": "LoRA adapter rank (r)."})
     hf_hub_repo_id: str | None = None
     run_test: bool = field(
         default=True,
-        metadata={"help": "If False, skip the test-split evaluation after training."}
+        metadata={"help": "If False, skip the test-split evaluation after training."},
     )
     use_flash_attention: bool = field(
-        default=True,
-        metadata={"help": "Whether to enable Flash Attention v1."}
+        default=True, metadata={"help": "Whether to enable Flash Attention v1."}
     )
 
-def parse_args() -> tuple[ModelArgs, DataArgs, CustomTrainingArgs]:
+
+def parse_args() -> tuple[DataArgs, CustomTrainingArgs]:
     """Parse CLI → three dataclass objects in one line."""
     parser = HfArgumentParser((DataArgs, CustomTrainingArgs))
     data_args, training_args = parser.parse_args_into_dataclasses()
@@ -111,7 +114,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     data_args, training_args = parse_args()
     load_environ_vars()
-    
+
     # ---------- Initialization ----------
     # choose device
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -120,36 +123,40 @@ def main() -> None:
     # reproducibility
     set_seed(training_args.seed)
     logger.info(f"Set seed: {training_args.seed}")
-    
+
     # ---------- Data Preprocessing ----------
     # load and tokenize dataset
     # load CSVs
     data_files = {
-        "train": str(data_args.train_sample_file if data_args.train_sample else data_args.train_file),
+        "train": str(
+            data_args.train_sample_file
+            if data_args.train_sample
+            else data_args.train_file
+        ),
         "validation": str(data_args.validation_file),
-        "test":       str(data_args.test_file),
+        "test": str(data_args.test_file),
     }
-    
-    ds = load_dataset(
-        "csv",
-        data_files=data_files
-    )
+
+    ds = load_dataset("csv", data_files=data_files)
     ds_tok, tok = tokenize_and_format(ds)
-    
+
     # initialize base model and LoRA
     base_model = build_base_model()
-    logger.info(f"Base model trainable params:\n{print_trainable_parameters(base_model)}")
+    logger.info(
+        f"Base model trainable params:\n{print_trainable_parameters(base_model)}"
+    )
     lora_model = build_peft_model(base_model, training_args.peft_rank)
     logger.info(
         f"LoRA model (peft_rank={training_args.peft_rank}) trainable params:\n{print_trainable_parameters(lora_model)}"
     )
-    
+
     # ---------- Train ----------
     # data collator: dynamic padding per batch
     data_collator = DataCollatorForSeq2Seq(
-        tok, model=lora_model, 
+        tok,
+        model=lora_model,
         padding="longest",  # or "max_length"
-        label_pad_token_id=-100
+        label_pad_token_id=-100,
     )
 
     # initialize trainer & train
@@ -162,22 +169,20 @@ def main() -> None:
         data_collator=data_collator,
         compute_metrics=build_compute_metrics(tok),
     )
-    
+
     # flash attention v1
     if training_args.use_flash_attention:
         logger.info("Using flash attention v1")
         ctx = torch.backends.cuda.sdp_kernel(
-            enable_flash=True,
-            enable_math=False,
-            enable_mem_efficient=False
+            enable_flash=True, enable_math=False, enable_mem_efficient=False
         )
     else:
         logger.info("Skipping flash attention v1")
         ctx = nullcontext()
-    
+
     with ctx:
         trainer.train()
-    
+
     # ---------- Save, Test or Push ----------
     # evaluate test
     if training_args.run_test:

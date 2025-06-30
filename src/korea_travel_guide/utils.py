@@ -8,6 +8,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+
 def print_trainable_parameters(model: PreTrainedModel) -> None:
     """
     Prints the number of trainable parameters in the model.
@@ -33,6 +34,6 @@ def load_environ_vars(wandb_project: str = "bart-base-korea-travel-guide-lora"):
         logger.info("Logged into Hugging Face Hub")
     else:
         logger.info("No HF token found to log into Hugging Face Hub")
-        
+
     # wandb
     os.environ["WANDB_PROJECT"] = wandb_project

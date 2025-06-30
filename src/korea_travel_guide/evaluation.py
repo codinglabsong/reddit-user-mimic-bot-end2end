@@ -1,13 +1,13 @@
-import numpy as np                             
-import evaluate                            
-from transformers import EvalPrediction        
+import numpy as np
+import evaluate
+from transformers import EvalPrediction
 
 
 def build_compute_metrics(tok):
     """Return a closure that Hugging Face's Trainer can call."""
-    rouge     = evaluate.load("rouge") # longest-substring overlap
-    bleu      = evaluate.load("bleu") # n-gram precision
-    bertscore = evaluate.load("bertscore") # semantic similarity
+    rouge = evaluate.load("rouge")  # longest-substring overlap
+    bleu = evaluate.load("bleu")  # n-gram precision
+    bertscore = evaluate.load("bertscore")  # semantic similarity
 
     def _compute_metrics(eval_pred: EvalPrediction):
         preds, labels = eval_pred.predictions, eval_pred.label_ids
@@ -22,23 +22,23 @@ def build_compute_metrics(tok):
         decoded_labels = tok.batch_decode(labels, skip_special_tokens=True)
 
         # metrics
-        rouge_l = rouge.compute(predictions=decoded_preds,
-                                references=decoded_labels,
-                                use_stemmer=True)["rougeL"]
+        rouge_l = rouge.compute(
+            predictions=decoded_preds, references=decoded_labels, use_stemmer=True
+        )["rougeL"]
         bleu_score = bleu.compute(
             predictions=decoded_preds,
-            references=[[ref] for ref in decoded_labels]  # BLEU expects list-of-lists
+            references=[[ref] for ref in decoded_labels],  # BLEU expects list-of-lists
         )["bleu"]
         bert_f1 = np.mean(
-            bertscore.compute(predictions=decoded_preds,
-                              references=decoded_labels,
-                              lang="en")["f1"]
+            bertscore.compute(
+                predictions=decoded_preds, references=decoded_labels, lang="en"
+            )["f1"]
         )
 
         # round for nice logging
         return {
             "rougeL": round(rouge_l * 100, 4),
-            "bleu":   round(bleu_score, 4),
+            "bleu": round(bleu_score, 4),
             "bertscore_f1": round(bert_f1, 4),
         }
 
