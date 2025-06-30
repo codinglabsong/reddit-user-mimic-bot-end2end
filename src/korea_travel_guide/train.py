@@ -3,14 +3,12 @@ import logging
 import random
 import numpy as np
 import torch
-import os
 import wandb
 from datasets import load_dataset
 from transformers import (
     DataCollatorForSeq2Seq,
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
-    Seq2SeqTrainingArguments
 )
 from pathlib import Path
 from korea_travel_guide.utils import load_environ_vars, print_trainable_parameters
@@ -46,13 +44,13 @@ def parse_args() -> argparse.Namespace:
         "--num_train_epochs", type=int, default=3, help="Number of training epochs."
     )
     p.add_argument(
-        "--train_batch_size",
+        "--per_device_train_batch_size",
         type=int,
         default=16,
         help="Batch size per device during training.",
     )
     p.add_argument(
-        "--eval_batch_size",
+        "--per_device_eval_batch_size",
         type=int,
         default=32,
         help="Batch size per device during evaluation.",
@@ -168,8 +166,8 @@ def main() -> None:
         lr_scheduler_type="linear",
         warmup_ratio=cfg.warmup_ratio,
         num_train_epochs=cfg.num_train_epochs,
-        per_device_train_batch_size=cfg.train_batch_size,
-        per_device_eval_batch_size=cfg.eval_batch_size,
+        per_device_train_batch_size=cfg.per_device_train_batch_size,
+        per_device_eval_batch_size=cfg.per_device_eval_batch_size,
         max_grad_norm=0.5,
         label_smoothing_factor=0.1,
         weight_decay=0.01,
