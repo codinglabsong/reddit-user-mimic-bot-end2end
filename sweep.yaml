@@ -1,0 +1,27 @@
+# sweep spec for Korea-Travel-Guide BART
+program: scripts/train.py        # <— tiny wrapper that calls src.korea_travel_guide.train:main
+method: bayes                    # {grid | random | bayes}
+
+metric:                          # what to optimise
+  name: eval/rougeL              # must match the key your compute_metrics returns
+  goal: maximize
+
+parameters:                      # ← every key is a CLI flag in your dataclasses
+  learning_rate:
+    min: 1e-5
+    max: 5e-4
+    distribution: log_uniform
+  num_train_epochs:
+    values: [2, 3, 4]
+  per_device_train_batch_size:
+    values: [8, 16]
+  weight_decay:
+    values: [0.0, 0.01]
+  peft_rank:
+    values: [4, 8, 16]          # LoRA capacity sweep
+  warmup_ratio:
+    values: [0.05, 0.1]
+
+early_terminate:                 # optional but saves GPU $
+  type: hyperband
+  min_iter: 1
