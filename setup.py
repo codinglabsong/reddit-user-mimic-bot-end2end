@@ -24,6 +24,7 @@ setup(
         "nltk",
         "absl-py",
         "rouge-score",
-        "bert_score"
+        "bert_score",
+        "optimum"
     ],
 )

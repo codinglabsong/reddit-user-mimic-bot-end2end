@@ -21,14 +21,6 @@ from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
-# model-specific knobs
-@dataclass
-class ModelArgs:
-    model_name_or_path: str = field(
-        default="facebook/bart-base",
-        metadata={"help": "HF checkpoint or path to a local BART."}
-    )
-
 # data-loading toggles
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 @dataclass
@@ -80,11 +72,15 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
         default=True,
         metadata={"help": "If False, skip the test-split evaluation after training."}
     )
+    use_flash_attention: bool = field(
+        default=True,
+        metadata={"help": "Whether to enable Flash Attention v1."}
+    )
 
 def parse_args() -> tuple[ModelArgs, DataArgs, CustomTrainingArgs]:
     """Parse CLI → three dataclass objects in one line."""
-    parser = HfArgumentParser((ModelArgs, DataArgs, CustomTrainingArgs))
-    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    parser = HfArgumentParser((DataArgs, CustomTrainingArgs))
+    data_args, training_args = parser.parse_args_into_dataclasses()
 
     # validations
     if training_args.push_to_hub and not training_args.hf_hub_repo_id:
@@ -97,7 +93,7 @@ def parse_args() -> tuple[ModelArgs, DataArgs, CustomTrainingArgs]:
     # set wandb for logging
     training_args.report_to = "wandb"
 
-    return model_args, data_args, training_args
+    return data_args, training_args
 
 
 def set_seed(seed: int) -> None:
@@ -113,7 +109,7 @@ def set_seed(seed: int) -> None:
 def main() -> None:
     """Entry point: parse args, prepare data, train, evaluate, and optionally push."""
     logging.basicConfig(level=logging.INFO)
-    model_args, data_args, training_args = parse_args()
+    data_args, training_args = parse_args()
     load_environ_vars()
     
     # ---------- Initialization ----------
@@ -166,8 +162,21 @@ def main() -> None:
         data_collator=data_collator,
         compute_metrics=build_compute_metrics(tok),
     )
-
-    trainer.train()
+    
+    # flash attention v1
+    if training_args.use_flash_attention:
+        logger.info("Using flash attention v1")
+        ctx = torch.backends.cuda.sdp_kernel(
+            enable_flash=True,
+            enable_math=False,
+            enable_mem_efficient=False
+        )
+    else:
+        logger.info("Skipping flash attention v1")
+        ctx = nullcontext()
+    
+    with ctx:
+        trainer.train()
     
     # ---------- Save, Test or Push ----------
     # evaluate test
