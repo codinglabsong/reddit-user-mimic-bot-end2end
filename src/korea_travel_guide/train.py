@@ -21,7 +21,7 @@ from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
-# Model-specific knobs
+# model-specific knobs
 @dataclass
 class ModelArgs:
     model_name_or_path: str = field(
@@ -29,7 +29,7 @@ class ModelArgs:
         metadata={"help": "HF checkpoint or path to a local BART."}
     )
 
-# Data-loading toggles
+# data-loading toggles
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 @dataclass
 class DataArgs:
@@ -42,7 +42,7 @@ class DataArgs:
         metadata={"help": "Use the mini CSV for smoke tests if True."}
     )
 
-# Training & LoRA extras — extend HF’s own Seq2SeqTrainingArguments
+# training & LoRA extras — extend HF’s own Seq2SeqTrainingArguments
 @dataclass
 class CustomTrainingArgs(Seq2SeqTrainingArguments):
     # overriding the hf defaults
