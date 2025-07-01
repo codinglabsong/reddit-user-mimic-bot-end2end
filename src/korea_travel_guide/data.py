@@ -162,10 +162,11 @@ def tokenize_and_format(
             examples["question"], max_length=max_input_length, truncation=True
         )
         # tokenize targets in “target” mode
-        with tok.as_target_tokenizer():
-            labels = tok(
-                examples["answer"], max_length=max_target_length, truncation=True
-            )
+        labels = tok(
+            text_target=examples["answer"],
+            max_length=max_target_length,
+            truncation=True,
+        )
 
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs

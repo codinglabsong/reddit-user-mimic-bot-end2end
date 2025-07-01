@@ -28,6 +28,7 @@ def build_compute_metrics(tok):
         bleu_score = bleu.compute(
             predictions=decoded_preds,
             references=[[ref] for ref in decoded_labels],  # BLEU expects list-of-lists
+            smooth=True,
         )["bleu"]
         bert_f1 = np.mean(
             bertscore.compute(
@@ -38,7 +39,7 @@ def build_compute_metrics(tok):
         # round for nice logging
         return {
             "rougeL": round(rouge_l * 100, 4),
-            "bleu": round(bleu_score, 4),
+            "bleu": round(bleu_score * 100, 4),
             "bertscore_f1": round(bert_f1, 4),
         }
 

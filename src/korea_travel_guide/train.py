@@ -47,14 +47,14 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     eval_strategy: str = "epoch"
     save_strategy: str = "epoch"
     logging_steps: int = 5
-    learning_rate: float = 1e-4
+    learning_rate: float = 3e-5
     lr_scheduler_type: str = "linear"
     warmup_ratio: float = 0.05
     num_train_epochs: int = 5
     per_device_train_batch_size: int = 16
     per_device_eval_batch_size: int = 32
     max_grad_norm: float = 0.5
-    label_smoothing_factor: float = 0.1
+    # label_smoothing_factor: float = 0.1
     weight_decay: float = 0.01
     save_total_limit: int = 2
     fp16: bool = True
@@ -148,6 +148,30 @@ def main() -> None:
     logger.info(
         f"LoRA model (peft_rank={training_args.peft_rank}) trainable params:\n{print_trainable_parameters(lora_model)}"
     )
+
+    # from torch.utils.data import DataLoader
+
+    # data_collator = DataCollatorForSeq2Seq(
+    #     tok,
+    #     model=lora_model,
+    #     padding="longest",
+    #     label_pad_token_id=-100,
+    # )
+
+    # batch = next(iter(DataLoader(ds_tok["train"], batch_size=2, collate_fn=data_collator )))
+    # # 1) decode inputs normally
+    # print("INPUTS:")
+    # print(tok.batch_decode(batch["input_ids"], skip_special_tokens=True))
+
+    # # 2) map -100 → pad_token_id before decoding labels
+    # labels = batch["labels"].detach().cpu().numpy()
+    # labels = np.where(labels != -100, labels, tok.pad_token_id)
+
+    # print("LABELS:")
+    # print(tok.batch_decode(labels, skip_special_tokens=True))
+
+    # import sys
+    # sys.exit()
 
     # ---------- Train ----------
     # toggle flash attention
