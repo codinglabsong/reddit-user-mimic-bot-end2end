@@ -50,11 +50,12 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     learning_rate: float = 1e-4
     lr_scheduler_type: str = "linear"
     warmup_ratio: float = 0.05
-    num_train_epochs: int = 6
+    num_train_epochs: int = 3
+
     per_device_train_batch_size: int = 8
     per_device_eval_batch_size: int = 16
     max_grad_norm: float = 0.5
-    # label_smoothing_factor: float = 0.1
+    label_smoothing_factor: float = 0.1
     weight_decay: float = 0.01
     save_total_limit: int = 2
     fp16: bool = True
@@ -69,6 +70,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
 
     # additional custom args
     peft_rank: int = field(default=32, metadata={"help": "LoRA adapter rank (r)."})
+    lora_alpha: int = 64
     hf_hub_repo_id: str | None = None
     run_test: bool = field(
         default=False,
@@ -144,9 +146,11 @@ def main() -> None:
     logger.info(
         f"Base model trainable params:\n{print_trainable_parameters(base_model)}"
     )
-    lora_model = build_peft_model(base_model, training_args.peft_rank)
+    lora_model = build_peft_model(
+        base_model, training_args.peft_rank, training_args.lora_alpha
+    )
     logger.info(
-        f"LoRA model (peft_rank={training_args.peft_rank}) trainable params:\n{print_trainable_parameters(lora_model)}"
+        f"LoRA model (peft_rank={training_args.peft_rank}, lora_alpha={training_args.lora_alpha}) trainable params:\n{print_trainable_parameters(lora_model)}"
     )
 
     # from torch.utils.data import DataLoader

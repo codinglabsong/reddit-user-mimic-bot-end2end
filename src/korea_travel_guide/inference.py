@@ -117,7 +117,7 @@ def main():
             # fast batched generate
             out = model.generate(
                 **enc,
-                max_length=1024,
+                max_length=512,
                 num_beams=5,
                 early_stopping=True,
                 length_penalty=1.0,
