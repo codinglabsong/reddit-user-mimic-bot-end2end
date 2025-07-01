@@ -50,9 +50,9 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     learning_rate: float = 1e-4
     lr_scheduler_type: str = "linear"
     warmup_ratio: float = 0.05
-    num_train_epochs: int = 8
-    per_device_train_batch_size: int = 16
-    per_device_eval_batch_size: int = 32
+    num_train_epochs: int = 6
+    per_device_train_batch_size: int = 8
+    per_device_eval_batch_size: int = 16
     max_grad_norm: float = 0.5
     label_smoothing_factor: float = 0.1
     # weight_decay: float = 0.01
@@ -77,7 +77,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
         metadata={"help": "If True, run the test-split evaluation after training."},
     )
     use_sdpa_attention: bool = field(
-        default=True, metadata={"help": "Enable Sdpa for mem-efficient kernel.}
+        default=True, metadata={"help": "Enable Sdpa for mem-efficient kernel."}
     )
 
 
