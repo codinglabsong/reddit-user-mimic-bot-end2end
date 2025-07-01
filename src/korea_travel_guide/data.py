@@ -34,7 +34,9 @@ def scrape(sub_size_map):
 
     for sub, sub_size in sub_size_map.items():
         got_size = 0
-        for post in reddit.subreddit(sub).hot(limit=None):  # , time_filter="all"
+        for post in reddit.subreddit(sub).top(
+            limit=None, time_filter="all"
+        ):  # , time_filter="all"
             # don't need to scrape more if got_size already matches sub_size
             if got_size >= sub_size:
                 break
