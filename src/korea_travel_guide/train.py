@@ -2,7 +2,6 @@ import logging
 import random
 import numpy as np
 import torch
-import os
 from contextlib import nullcontext
 from datasets import load_dataset
 from dataclasses import dataclass, field
@@ -51,7 +50,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     learning_rate: float = 1e-4
     lr_scheduler_type: str = "linear"
     warmup_ratio: float = 0.05
-    num_train_epochs: int = 3
+    num_train_epochs: int = 5
     per_device_train_batch_size: int = 16
     per_device_eval_batch_size: int = 32
     max_grad_norm: float = 0.5
@@ -89,9 +88,9 @@ def parse_args() -> tuple[DataArgs, CustomTrainingArgs]:
     if training_args.push_to_hub and not training_args.hf_hub_repo_id:
         parser.error("--hf_hub_repo_id is required when --push_to_hub is set")
 
-    # isolate each run’s artefacts (good for sweeps)
-    run_id = os.environ.get("WANDB_RUN_ID", uuid4().hex[:8])
-    training_args.output_dir = f"{training_args.output_dir}/{run_id}"
+    # # isolate each run’s artefacts (good for sweeps)
+    # run_id = os.environ.get("WANDB_RUN_ID", uuid4().hex[:8])
+    # training_args.output_dir = f"{training_args.output_dir}/{run_id}"
 
     # set wandb for logging
     training_args.report_to = "wandb"
@@ -151,15 +150,16 @@ def main() -> None:
     )
 
     # ---------- Train ----------
-    # toggle flash attention v1
+    # toggle flash attention
     if training_args.use_flash_attention:
-        logger.info("Using flash attention v1")
+        logger.info("Using flash attention")
         ctx = torch.backends.cuda.sdp_kernel(
-            enable_flash=True, enable_math=False, enable_mem_efficient=False
+            enable_flash=True, enable_math=True, enable_mem_efficient=True
         )
     else:
-        logger.info("Skipping flash attention v1")
+        logger.info("Skipping flash attention")
         ctx = nullcontext()
+    # ctx = nullcontext()
 
     # data collator: dynamic padding per batch
     data_collator = DataCollatorForSeq2Seq(

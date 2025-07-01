@@ -20,14 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ModelArgs:
-    model_id: str = field(
-        default="facebook/bart-base",
-        metadata={"help": "HF Hub repo or local path for the LoRA adapter."},
-    )
-
-
-@dataclass
 class InferenceArgs:
     mode: str = field(
         default="test",
@@ -36,15 +28,11 @@ class InferenceArgs:
         },
     )
     batch_size: int = field(
-        default=256, metadata={"help": "Batch size for evaluation or prediction."}
+        default=32, metadata={"help": "Batch size for evaluation or prediction."}
     )
     texts: list[str] = field(
         default_factory=list,
         metadata={"help": "One or more input texts for `predict` mode."},
-    )
-    top_k: int = field(
-        default=3,
-        metadata={"help": "Number of top tokens/outputs to return in `predict` mode."},
     )
     use_flash_attention: bool = field(
         default=True, metadata={"help": "Enable Flash Attention v1 (via sdp_kernel)."}
@@ -52,29 +40,30 @@ class InferenceArgs:
 
 
 def parse_args():
-    parser = HfArgumentParser((ModelArgs, InferenceArgs))
-    return parser.parse_args_into_dataclasses()
+    parser = HfArgumentParser(InferenceArgs)
+    (inf_args,) = parser.parse_args_into_dataclasses()
+    return inf_args
 
 
 def main():
     logging.basicConfig(level=logging.INFO)
     load_environ_vars()
-    model_args, inf_args = parse_args()
+    inf_args = parse_args()
 
     # set device
     device = 0 if torch.cuda.is_available() else -1
     logger.info(f"Using device: {device}")
 
     # load tokenizer + model
-    tok = AutoTokenizer.from_pretrained(model_args.model_id)
+    tok = AutoTokenizer.from_pretrained("facebook/bart-base")
     base_model = build_base_model()
-    model = load_peft_model_for_inference(base_model, model_args.model_id)
+    model = load_peft_model_for_inference(base_model)
 
     # prepare Flash‐Attention context
     if inf_args.use_flash_attention and device >= 0:
-        logger.info("Using flash attention v1")
+        logger.info("Using flash attention")
         ctx = torch.backends.cuda.sdp_kernel(
-            enable_flash=True, enable_math=False, enable_mem_efficient=False
+            enable_flash=True, enable_math=True, enable_mem_efficient=True
         )
     else:
         logger.info("Skipping flash attention v1")
@@ -82,11 +71,14 @@ def main():
 
     # tokenize & format depending on mode
     if inf_args.mode == "test":
-        # load test split
+        # load dataset
         PROJECT_ROOT = Path(__file__).resolve().parents[2]
-        ds = load_dataset(
-            "csv", data_files={"test": str(PROJECT_ROOT / "data/processed/test.csv")}
-        )
+        data_files = {
+            "train": str(PROJECT_ROOT / "data/processed/train.csv"),
+            "validation": str(PROJECT_ROOT / "data/processed/val.csv"),
+            "test": str(PROJECT_ROOT / "data/processed/test.csv"),
+        }
+        ds = load_dataset("csv", data_files=data_files)
         ds_tok, _ = tokenize_and_format(ds)
         data_collator = DataCollatorForSeq2Seq(
             tok, model=model, padding="longest", label_pad_token_id=-100
@@ -94,7 +86,7 @@ def main():
         trainer = Seq2SeqTrainer(
             model=model,
             args=Seq2SeqTrainingArguments(
-                output_dir="output/inference",
+                output_dir="outputs/inference",
                 per_device_eval_batch_size=inf_args.batch_size,
                 predict_with_generate=True,
                 report_to=[],
@@ -106,7 +98,8 @@ def main():
         )
 
         with ctx:
-            metrics = trainer.evaluate()
+            pred_output = trainer.predict(ds_tok["test"])
+        metrics = pred_output.metrics
         logger.info(f"Test metrics: {metrics}")
 
     elif inf_args.mode == "predict":
