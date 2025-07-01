@@ -28,6 +28,9 @@ def clean_text(txt: str) -> str:
     txt = re.sub(r":[\w_]+:", "", txt)
     # collapse > quoted blocks (common in Reddit replies)
     txt = re.sub(r"(^|\n)&gt;.*", "", txt)
+    # remove bot regex guard
+    BOT_FOOTER = re.compile(r"\*I am a bot.*?$", flags=re.I | re.S)
+    txt = BOT_FOOTER.sub("", txt)
     # collapse whitespace
     txt = re.sub(r"\s+", " ", txt).strip()
     return txt
@@ -39,6 +42,9 @@ def scrape(sub_size_map):
 
     for sub, sub_size in sub_size_map.items():
         got_size = 0
+        SKIP_AUTHORS = {"AutoModerator"}
+        FLAIR_BLACKLIST = {"announcement", "meta", "megathread"}
+        SEEN_TITLES = set()
         for post in reddit.subreddit(sub).top(
             limit=None, time_filter="all"
         ):  # , time_filter="all"
@@ -46,11 +52,11 @@ def scrape(sub_size_map):
             if got_size >= sub_size:
                 break
 
-            SKIP_AUTHORS = {"AutoModerator"}
-            FLAIR_BLACKLIST = {"announcement", "meta", "megathread"}
-            SEEN_TITLES = set()
-
             try:
+                # sort the order of comments first to avoid error before handling the post
+                post._comments = None  # low-level cache clear
+                post.comment_sort = "best"  # sort by reddit's "best" ranking
+
                 # skip any link or image post, no posts with score lower than 1, no pinned/mod posts, ban any “over 18” content, no locked thread, no crossposts
                 if (
                     not post.is_self
@@ -82,7 +88,6 @@ def scrape(sub_size_map):
                     continue
 
                 # get the answer as the highest sore comment
-                post.comment_sort = "best"  # sort by reddit's "best" ranking
                 post.comments.replace_more(
                     limit=0
                 )  # replace_more(limit=0) prevents getting more comments that are yet to be fetched. We just need the best comments.
@@ -105,7 +110,7 @@ def scrape(sub_size_map):
                             and post.author
                             and c.author.name == post.author.name
                         )
-                        or c.score < 3  # require a few up-votes
+                        or c.score < 2  # require a few up-votes
                         or len(c.body.split()) < 30  # avoid one-liners
                     )
                 ]
