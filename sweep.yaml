@@ -17,9 +17,9 @@ parameters:
     max: 0.001
     distribution: log_uniform_values
   num_train_epochs:
-    values: [1]
+    values: [2]
   peft_rank:
-    values: [4, 8, 16]
+    values: [32]
   train_sample:
     values: [True]
 

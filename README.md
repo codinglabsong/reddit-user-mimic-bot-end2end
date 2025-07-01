@@ -4,5 +4,5 @@ wandb sweep sweep.yaml
 
 # Terminal prints:  Sweep ID: 3k1xg8wq
 # 2 (start an agent) – one per GPU / machine
-wandb <ENTITY>/<PROJECT>/<SWEEP-ID>
+wandb agent <ENTITY>/<PROJECT>/<SWEEP-ID>
 ```
