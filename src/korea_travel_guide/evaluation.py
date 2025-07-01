@@ -7,7 +7,7 @@ def build_compute_metrics(tok):
     """Return a closure that Hugging Face's Trainer can call."""
     rouge = evaluate.load("rouge")  # longest-substring overlap
     bleu = evaluate.load("bleu")  # n-gram precision
-    bertscore = evaluate.load("bertscore")  # semantic similarity
+    # bertscore = evaluate.load("bertscore")  # semantic similarity
 
     def _compute_metrics(eval_pred: EvalPrediction):
         preds, labels = eval_pred.predictions, eval_pred.label_ids
@@ -30,17 +30,17 @@ def build_compute_metrics(tok):
             references=[[ref] for ref in decoded_labels],  # BLEU expects list-of-lists
             smooth=True,
         )["bleu"]
-        bert_f1 = np.mean(
-            bertscore.compute(
-                predictions=decoded_preds, references=decoded_labels, lang="en"
-            )["f1"]
-        )
+        # bert_f1 = np.mean(
+        #     bertscore.compute(
+        #         predictions=decoded_preds, references=decoded_labels, lang="en"
+        #     )["f1"]
+        # )
 
         # round for nice logging
         return {
             "rougeL": round(rouge_l * 100, 4),
             "bleu": round(bleu_score * 100, 4),
-            "bertscore_f1": round(bert_f1, 4),
+            # "bertscore_f1": round(bert_f1, 4),
         }
 
     return _compute_metrics

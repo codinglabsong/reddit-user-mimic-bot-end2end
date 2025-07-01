@@ -204,6 +204,7 @@ def tokenize_and_format(
             examples["question"],
             max_length=max_input_length,
             truncation=True,
+            padding=False,
         )
         # tokenize targets in “target” mode
         tok.truncation_side = "left"
@@ -211,6 +212,7 @@ def tokenize_and_format(
             text_target=examples["answer"],
             max_length=max_target_length,
             truncation=True,
+            padding=False,
         )
         tok.truncation_side = "right"  # reset for safety
 
