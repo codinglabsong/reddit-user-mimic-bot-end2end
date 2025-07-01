@@ -23,6 +23,11 @@ def clean_text(txt: str) -> str:
     txt = BeautifulSoup(txt, "html.parser").get_text()
     # remove code fences
     txt = re.sub(r"```[\s\S]*?```", "", txt)
+    # kill URLs & emojis
+    txt = re.sub(r"https?://\S+", "", txt)
+    txt = re.sub(r":[\w_]+:", "", txt)
+    # collapse > quoted blocks (common in Reddit replies)
+    txt = re.sub(r"(^|\n)&gt;.*", "", txt)
     # collapse whitespace
     txt = re.sub(r"\s+", " ", txt).strip()
     return txt
@@ -41,46 +46,75 @@ def scrape(sub_size_map):
             if got_size >= sub_size:
                 break
 
+            SKIP_AUTHORS = {"AutoModerator"}
+            FLAIR_BLACKLIST = {"announcement", "meta", "megathread"}
+            SEEN_TITLES = set()
+
             try:
                 # skip any link or image post, no posts with score lower than 1, no pinned/mod posts, ban any “over 18” content, no locked thread, no crossposts
                 if (
                     not post.is_self
                     or post.removed_by_category
-                    or post.score < 1
-                    or post.stickied
                     or post.over_18
                     or post.locked
-                    or hasattr(post, "crosspost_parent")
+                    or post.stickied  # pinned
+                    or post.distinguished  # mod announcements
+                    or (post.author and post.author.name in SKIP_AUTHORS)
+                    or hasattr(post, "crosspost_parent")  # cross-posts
+                    or post.score < 2  # weak karma
+                    or post.upvote_ratio < 0.90  # low engagement
+                    or (
+                        post.link_flair_text
+                        and post.link_flair_text.lower() in FLAIR_BLACKLIST
+                    )  # PSA / Meta flair
+                    or post.title.lower().strip() in SEEN_TITLES  # de-dupe
                 ):
                     continue
-
-                # if (post.removed_by_category or post.score < 1
-                #     or post.stickied or post.over_18
-                #     or post.locked or hasattr(post, "crosspost_parent")):
-                #     continue
+                SEEN_TITLES.add(post.title.lower().strip())
 
                 # get the question as a merge of the title and body of the post
                 title = post.title.strip()
                 body = post.selftext.strip()
                 q = "\n\n".join(filter(None, [title, body]))
 
+                # length sanitation
+                if len(q.split()) < 6:
+                    continue
+
                 # get the answer as the highest sore comment
+                post.comment_sort = "best"  # sort by reddit's "best" ranking
                 post.comments.replace_more(
                     limit=0
                 )  # replace_more(limit=0) prevents getting more comments that are yet to be fetched. We just need the best comments.
                 comments = post.comments.list()
+
+                # hybrid score (score + word length to avoid highly upvoted jokes or sarcastic responses)
+                def _comment_quality(c):
+                    words = len(c.body.split())
+                    return c.score * (words**0.3)
+
+                filtered = [
+                    c
+                    for c in comments
+                    if not (
+                        c.stickied
+                        or c.distinguished  # mod stickies
+                        or (c.author and c.author.name in SKIP_AUTHORS)
+                        or (
+                            c.author
+                            and post.author
+                            and c.author.name == post.author.name
+                        )
+                        or c.score < 3  # require a few up-votes
+                        or len(c.body.split()) < 30  # avoid one-liners
+                    )
+                ]
                 if (
-                    not comments
+                    not filtered
                 ):  # if no comments at all, we can't create a Q/A pair dataset
                     continue
-                top_comment = max(comments, key=lambda c: c.score)
-                if top_comment.score < 1:  # exclude posts with comments under 2 upvotes
-                    continue
+                top_comment = max(filtered, key=_comment_quality)
                 a = top_comment.body.strip()
-
-                # length sanitation
-                if len(q.split()) < 3 or len(a.split()) < 6:
-                    continue
 
                 qa.append(
                     {
@@ -154,7 +188,7 @@ def tokenize_and_format(
     ds: DatasetDict,
     checkpoint: str = "facebook/bart-base",
     max_input_length: int = 1024,
-    max_target_length: int = 256,
+    max_target_length: int = 1024,
 ) -> Tuple[DatasetDict, AutoTokenizer]:
     tok = AutoTokenizer.from_pretrained(checkpoint)
 
