@@ -16,7 +16,7 @@ def build_peft_model(
     lora_alpha: int = 16,
     lora_dropout: float = 0.1,
     bias: str = "none",
-    target_modules: list[str] = ("q_proj", "v_proj"),
+    target_modules: list[str] = ("q_proj", "k_proj", "v_proj", "o_proj"),
     modules_to_save: list[str] = ("lm_head",),
 ) -> PeftModel:
     config = LoraConfig(

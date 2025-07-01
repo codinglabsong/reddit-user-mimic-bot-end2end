@@ -47,12 +47,12 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     eval_strategy: str = "epoch"
     save_strategy: str = "epoch"
     logging_steps: int = 5
-    learning_rate: float = 3e-5
+    learning_rate: float = 1e-4
     lr_scheduler_type: str = "linear"
     warmup_ratio: float = 0.05
-    num_train_epochs: int = 5
-    per_device_train_batch_size: int = 16
-    per_device_eval_batch_size: int = 32
+    num_train_epochs: int = 6
+    per_device_train_batch_size: int = 8
+    per_device_eval_batch_size: int = 16
     max_grad_norm: float = 0.5
     # label_smoothing_factor: float = 0.1
     weight_decay: float = 0.01
@@ -68,7 +68,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     label_names: List[str] = field(default_factory=lambda: ["labels"])
 
     # additional custom args
-    peft_rank: int = field(default=8, metadata={"help": "LoRA adapter rank (r)."})
+    peft_rank: int = field(default=32, metadata={"help": "LoRA adapter rank (r)."})
     hf_hub_repo_id: str | None = None
     run_test: bool = field(
         default=False,
