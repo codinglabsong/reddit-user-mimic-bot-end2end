@@ -173,7 +173,7 @@ def main() -> None:
         eval_dataset=ds_tok["validation"],
         tokenizer=tok,
         data_collator=data_collator,
-        compute_metrics=build_compute_metrics(tok),
+        # compute_metrics=build_compute_metrics(tok),
     )
 
     trainer.train()

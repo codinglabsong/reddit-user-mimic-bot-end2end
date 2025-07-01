@@ -1,23 +1,27 @@
 # sweep spec for Korea-Travel-Guide BART
 program: scripts/train.py
+
+project: bart-base-korea-travel-guide-lora
+entity:  codinglabsong-keio-jp
+
 method: bayes # {grid | random | bayes}
-run_cap: 5 # sweep run limit
+run_cap: 10 # sweep run limit
 
 metric: # what to optimise
-  name: eval/rougeL # must match the key in evaluation.compute_metrics returns
+  name: eval/loss # must match the key in evaluation.compute_metrics returns
   goal: maximize
 
 parameters:
   learning_rate:
-    min: 1e-5
-    max: 1e-3
-    distribution: log_uniform
+    min: 0.00001
+    max: 0.001
+    distribution: log_uniform_values
   num_train_epochs:
-    values: 1
+    values: [1]
   peft_rank:
     values: [4, 8, 16]
   train_sample:
-  values: True
+    values: [True]
 
 early_terminate:
   type: hyperband
