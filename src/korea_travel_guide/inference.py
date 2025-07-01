@@ -34,8 +34,8 @@ class InferenceArgs:
         default_factory=list,
         metadata={"help": "One or more input texts for `predict` mode."},
     )
-    use_flash_attention: bool = field(
-        default=True, metadata={"help": "Enable Flash Attention v1 (via sdp_kernel)."}
+    use_sdpa_attention: bool = field(
+        default=True, metadata={"help": "Enable Sdpa for mem-efficient kernel."}
     )
 
 
@@ -57,17 +57,9 @@ def main():
     # load tokenizer + model
     tok = AutoTokenizer.from_pretrained("facebook/bart-base")
     base_model = build_base_model()
+    if training_args.use_sdpa_attention:
+        base_model.config.attn_implementation = "sdpa"
     model = load_peft_model_for_inference(base_model)
-
-    # prepare Flash‐Attention context
-    if inf_args.use_flash_attention and device >= 0:
-        logger.info("Using flash attention")
-        ctx = torch.backends.cuda.sdp_kernel(
-            enable_flash=True, enable_math=True, enable_mem_efficient=True
-        )
-    else:
-        logger.info("Skipping flash attention v1")
-        ctx = nullcontext()
 
     # tokenize & format depending on mode
     if inf_args.mode == "test":
@@ -97,8 +89,7 @@ def main():
             compute_metrics=build_compute_metrics(tok),
         )
 
-        with ctx:
-            pred_output = trainer.predict(ds_tok["test"])
+        pred_output = trainer.predict(ds_tok["test"])
         metrics = pred_output.metrics
         logger.info(f"Test metrics: {metrics}")
 
@@ -113,16 +104,15 @@ def main():
             truncation=True,
         ).to(model.device)
 
-        with ctx:
-            # fast batched generate
-            out = model.generate(
-                **enc,
-                max_length=512,
-                num_beams=5,
-                early_stopping=True,
-                length_penalty=1.0,
-                repetition_penalty=1.1,
-            )
+        # fast batched generate
+        out = model.generate(
+            **enc,
+            max_length=512,
+            num_beams=5,
+            early_stopping=True,
+            length_penalty=1.0,
+            repetition_penalty=1.1,
+        )
 
         decoded = tok.batch_decode(out, skip_special_tokens=True)
         for inp, pred in zip(inf_args.texts, decoded):

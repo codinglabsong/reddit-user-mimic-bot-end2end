@@ -46,16 +46,16 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     )
     eval_strategy: str = "epoch"
     save_strategy: str = "epoch"
-    logging_steps: int = 5
+    logging_steps: int = 50
     learning_rate: float = 1e-4
     lr_scheduler_type: str = "linear"
     warmup_ratio: float = 0.05
-    num_train_epochs: int = 3
-    per_device_train_batch_size: int = 8
-    per_device_eval_batch_size: int = 16
+    num_train_epochs: int = 8
+    per_device_train_batch_size: int = 16
+    per_device_eval_batch_size: int = 32
     max_grad_norm: float = 0.5
     label_smoothing_factor: float = 0.1
-    weight_decay: float = 0.01
+    # weight_decay: float = 0.01
     generation_max_length: int = 384
     save_total_limit: int = 2
     fp16: bool = True
@@ -76,8 +76,8 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
         default=False,
         metadata={"help": "If True, run the test-split evaluation after training."},
     )
-    use_flash_attention: bool = field(
-        default=True, metadata={"help": "Whether to enable Flash Attention v1."}
+    use_sdpa_attention: bool = field(
+        default=True, metadata={"help": "Enable Sdpa for mem-efficient kernel.}
     )
 
 
@@ -143,6 +143,8 @@ def main() -> None:
 
     # initialize base model and LoRA
     base_model = build_base_model()
+    if training_args.use_sdpa_attention:
+        base_model.config.attn_implementation = "sdpa"
     logger.info(
         f"Base model trainable params:\n{print_trainable_parameters(base_model)}"
     )
@@ -153,42 +155,7 @@ def main() -> None:
         f"LoRA model (peft_rank={training_args.peft_rank}, lora_alpha={training_args.lora_alpha}) trainable params:\n{print_trainable_parameters(lora_model)}"
     )
 
-    # from torch.utils.data import DataLoader
-
-    # data_collator = DataCollatorForSeq2Seq(
-    #     tok,
-    #     model=lora_model,
-    #     padding="longest",
-    #     label_pad_token_id=-100,
-    # )
-
-    # batch = next(iter(DataLoader(ds_tok["train"], batch_size=2, collate_fn=data_collator )))
-    # # 1) decode inputs normally
-    # print("INPUTS:")
-    # print(tok.batch_decode(batch["input_ids"], skip_special_tokens=True))
-
-    # # 2) map -100 → pad_token_id before decoding labels
-    # labels = batch["labels"].detach().cpu().numpy()
-    # labels = np.where(labels != -100, labels, tok.pad_token_id)
-
-    # print("LABELS:")
-    # print(tok.batch_decode(labels, skip_special_tokens=True))
-
-    # import sys
-    # sys.exit()
-
     # ---------- Train ----------
-    # toggle flash attention
-    if training_args.use_flash_attention:
-        logger.info("Using flash attention")
-        ctx = torch.backends.cuda.sdp_kernel(
-            enable_flash=True, enable_math=True, enable_mem_efficient=True
-        )
-    else:
-        logger.info("Skipping flash attention")
-        ctx = nullcontext()
-    # ctx = nullcontext()
-
     # data collator: dynamic padding per batch
     data_collator = DataCollatorForSeq2Seq(
         tok,
@@ -209,15 +176,13 @@ def main() -> None:
         compute_metrics=build_compute_metrics(tok),
     )
 
-    with ctx:
-        trainer.train()
+    trainer.train()
 
     # ---------- Save, Test or Push ----------
     # evaluate test
     if training_args.run_test:
         logger.info("Running final test-set evaluation...")
-        with ctx:
-            metrics = trainer.evaluate(ds_tok["test"])
+        metrics = trainer.evaluate(ds_tok["test"])
         logger.info(f"Test metrics:\n{metrics}")
     else:
         logger.info("Skipping test evaluation.")
