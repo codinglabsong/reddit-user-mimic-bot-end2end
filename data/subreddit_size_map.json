@@ -1,4 +1,8 @@
 {
-    "askscience": 500,
-    "AskHistorians": 500
+    "ExplainLikeImFive": 500,
+    "AskPhysics": 500,
+    "AskSocialScience": 500,
+    "AskDocs": 500,
+    "askscience": 1500,
+    "AskHistorians": 1500
 }

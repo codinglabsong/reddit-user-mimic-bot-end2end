@@ -51,12 +51,12 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     lr_scheduler_type: str = "linear"
     warmup_ratio: float = 0.05
     num_train_epochs: int = 3
-
     per_device_train_batch_size: int = 8
     per_device_eval_batch_size: int = 16
     max_grad_norm: float = 0.5
     label_smoothing_factor: float = 0.1
     weight_decay: float = 0.01
+    generation_max_length: int = 384
     save_total_limit: int = 2
     fp16: bool = True
     predict_with_generate: bool = True
@@ -195,6 +195,7 @@ def main() -> None:
         model=lora_model,
         padding="longest",  # or "max_length"
         label_pad_token_id=-100,
+        pad_to_multiple_of=8,  # tensor-core friendly
     )
 
     # initialize trainer & train
