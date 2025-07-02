@@ -2,7 +2,7 @@ import json
 import pandas as pd
 import argparse
 from pathlib import Path
-from korea_travel_guide.data import scrape, preprocess, split_and_save
+from bart_reddit_lora.data import scrape, preprocess, split_and_save
 
 
 def parse_args():

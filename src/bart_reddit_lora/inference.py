@@ -10,10 +10,10 @@ from transformers import (
     Seq2SeqTrainingArguments,
 )
 from pathlib import Path
-from korea_travel_guide.utils import load_environ_vars
-from korea_travel_guide.model import build_base_model, load_peft_model_for_inference
-from korea_travel_guide.data import tokenize_and_format
-from korea_travel_guide.evaluation import build_compute_metrics
+from bart_reddit_lora.utils import load_environ_vars
+from bart_reddit_lora.model import build_base_model, load_peft_model_for_inference
+from bart_reddit_lora.data import tokenize_and_format
+from bart_reddit_lora.evaluation import build_compute_metrics
 
 logger = logging.getLogger(__name__)
 

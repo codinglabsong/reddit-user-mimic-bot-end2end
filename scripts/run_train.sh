@@ -1,3 +1,3 @@
 set -euo pipefail
 
-python -m korea_travel_guide.train "$@"
+python -m bart_reddit_lora.train "$@"

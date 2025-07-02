@@ -13,9 +13,9 @@ from transformers import (
 )
 from typing import List
 from pathlib import Path
-from korea_travel_guide.utils import load_environ_vars, print_trainable_parameters
-from korea_travel_guide.model import build_base_model, build_peft_model
-from korea_travel_guide.data import tokenize_and_format
+from bart_reddit_lora.utils import load_environ_vars, print_trainable_parameters
+from bart_reddit_lora.model import build_base_model, build_peft_model
+from bart_reddit_lora.data import tokenize_and_format
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
@@ -148,7 +148,7 @@ def main() -> None:
             "validation": str(data_args.validation_file),
             "test": str(data_args.test_file),
         }
-        ds = load_dataset("csv", data_files=data_files)
+        ds = load_dataset("csv", data_files=data_files, streaming=True)
     # # load and tokenize dataset
     # # load CSVs
     # data_files = {

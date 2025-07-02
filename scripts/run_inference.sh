@@ -1,3 +1,3 @@
 set -euo pipefail
 
-python -m korea_travel_guide.inference "$@"
+python -m bart_reddit_lora.inference "$@"
