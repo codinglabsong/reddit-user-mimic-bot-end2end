@@ -1,14 +1,10 @@
 # sweep spec for bart-base-reddit-lora
 program: scripts/train.py
-
-project: bart-base-reddit-lora
-entity:  codinglabsong-keio-jp
+name: bart-base-reddit-lora-sweep
 
 method: bayes # {grid | random | bayes}
-run_cap: 15 # sweep run limit
-
 metric: # what to optimise
-  name: eval/loss # must match the key in evaluation.compute_metrics returns
+  name: eval_loss # must match the key in .evaluate() returns
   goal: minimize
 
 parameters:
@@ -22,6 +18,10 @@ parameters:
     values: [32, 64]
   train_sample:
     values: [True]
+run_cap: 10 # sweep run limit
+
+project: bart-base-reddit-lora
+entity: codinglabsong-keio-jp
 
 # early_terminate:
 #   type: hyperband

@@ -61,7 +61,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     logging_steps: int = 50
     save_total_limit: int = 2
     load_best_model_at_end: bool = True
-    metric_for_best_model: str = "eval/loss"
+    metric_for_best_model: str = "loss"
     greater_is_better: bool = False
 
     fp16: bool = True
@@ -147,7 +147,7 @@ def main() -> None:
             "validation": str(data_args.validation_file),
             "test": str(data_args.test_file),
         }
-        ds = load_dataset("csv", data_files=data_files, streaming=True)
+        ds = load_dataset("csv", data_files=data_files)
     # # load and tokenize dataset
     # # load CSVs
     # data_files = {
