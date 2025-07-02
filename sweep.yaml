@@ -17,11 +17,11 @@ parameters:
     max: 0.001 # 1e-3
     distribution: log_uniform_values
   num_train_epochs:
-    values: 4
+    values: [4]
   peft_rank:
     values: [32, 64]
   train_sample:
-    values: True
+    values: [True]
 
 # early_terminate:
 #   type: hyperband
