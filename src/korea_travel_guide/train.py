@@ -34,7 +34,9 @@ class DataArgs:
     train_sample: bool = field(
         default=False, metadata={"help": "Use the mini CSV for smoke tests if True."}
     )
-
+    use_squad: bool = field(
+        default=False, metadata={"help": "If True, ignore CSVs and load SQuAD instead."}
+    )
 
 # training & LoRA extras — extend HF’s own Seq2SeqTrainingArguments
 @dataclass
@@ -126,19 +128,42 @@ def main() -> None:
     logger.info(f"Set seed: {training_args.seed}")
 
     # ---------- Data Preprocessing ----------
-    # load and tokenize dataset
-    # load CSVs
-    data_files = {
-        "train": str(
-            data_args.train_sample_file
-            if data_args.train_sample
-            else data_args.train_file
-        ),
-        "validation": str(data_args.validation_file),
-        "test": str(data_args.test_file),
-    }
+    # load either CSVs or SQuAD for a quick pipeline sanity check
+    if data_args.use_squad:
+        # 1) pull down SQuAD  
+        raw = load_dataset("squad")
+        # 2) map to simple Q/A pairs (first answer only)
+        def to_qa(ex):
+            return {
+                "question": ex["question"],
+                "answer": ex["answers"]["text"][0]
+            }
+        ds = raw.map(to_qa, remove_columns=raw["train"].column_names)
+    else:
+        # load from your processed CSVs
+        data_files = {
+            "train": str(
+                data_args.train_sample_file
+                if data_args.train_sample
+                else data_args.train_file
+            ),
+            "validation": str(data_args.validation_file),
+            "test": str(data_args.test_file),
+        }
+        ds = load_dataset("csv", data_files=data_files)
+    # # load and tokenize dataset
+    # # load CSVs
+    # data_files = {
+    #     "train": str(
+    #         data_args.train_sample_file
+    #         if data_args.train_sample
+    #         else data_args.train_file
+    #     ),
+    #     "validation": str(data_args.validation_file),
+    #     "test": str(data_args.test_file),
+    # }
 
-    ds = load_dataset("csv", data_files=data_files)
+    # ds = load_dataset("csv", data_files=data_files)
     ds_tok, tok = tokenize_and_format(ds)
 
     # initialize base model and LoRA

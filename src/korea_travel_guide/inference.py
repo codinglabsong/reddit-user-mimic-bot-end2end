@@ -51,15 +51,16 @@ def main():
     inf_args = parse_args()
 
     # set device
-    device = 0 if torch.cuda.is_available() else -1
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
     # load tokenizer + model
     tok = AutoTokenizer.from_pretrained("facebook/bart-base")
     base_model = build_base_model()
-    if training_args.use_sdpa_attention:
+    if inf_args.use_sdpa_attention:
         base_model.config.attn_implementation = "sdpa"
     model = load_peft_model_for_inference(base_model)
+    model.to(device)
 
     # tokenize & format depending on mode
     if inf_args.mode == "test":
@@ -102,7 +103,8 @@ def main():
             return_tensors="pt",
             padding=True,
             truncation=True,
-        ).to(model.device)
+        )
+        enc = {k: v.to(device) for k, v in enc.items()}
 
         # fast batched generate
         out = model.generate(
