@@ -15,10 +15,10 @@ parameters:
   num_train_epochs:
     values: [4]
   peft_rank:
-    values: [32, 64]
+    values: [128]
   train_sample:
     values: [True]
-run_cap: 10 # sweep run limit
+run_cap: 5 # sweep run limit
 
 project: bart-base-reddit-lora
 entity: codinglabsong-keio-jp
