@@ -22,7 +22,7 @@ def parse_args():
         default="data/processed/train_sample.csv",
         help="Where to write the sampled CSV",
     )
-    p.add_argument("--n", type=int, default=100, help="Number of examples to sample")
+    p.add_argument("--n", type=int, default=500, help="Number of examples to sample")
     p.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"
     )
