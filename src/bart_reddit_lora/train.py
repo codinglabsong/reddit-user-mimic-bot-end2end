@@ -58,7 +58,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
 
     eval_strategy: str = "epoch"
     save_strategy: str = "epoch"
-    logging_steps: int = 50
+    logging_steps: int = 1
     save_total_limit: int = 2
     load_best_model_at_end: bool = True
     metric_for_best_model: str = "loss"
