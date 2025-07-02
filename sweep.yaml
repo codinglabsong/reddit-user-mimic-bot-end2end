@@ -5,24 +5,24 @@ project: bart-base-reddit-lora
 entity:  codinglabsong-keio-jp
 
 method: bayes # {grid | random | bayes}
-run_cap: 10 # sweep run limit
+run_cap: 15 # sweep run limit
 
 metric: # what to optimise
   name: eval/loss # must match the key in evaluation.compute_metrics returns
-  goal: maximize
+  goal: minimize
 
 parameters:
   learning_rate:
-    min: 0.00001
-    max: 0.001
+    min: 0.00001 # 1e-5
+    max: 0.001 # 1e-3
     distribution: log_uniform_values
   num_train_epochs:
-    values: [2]
+    values: 4
   peft_rank:
-    values: [32]
+    values: [32, 64]
   train_sample:
-    values: [True]
+    values: True
 
-early_terminate:
-  type: hyperband
-  min_iter: 1
+# early_terminate:
+#   type: hyperband
+#   min_iter: 3

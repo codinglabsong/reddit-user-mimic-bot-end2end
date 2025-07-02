@@ -75,7 +75,6 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
 
     # additional custom args
     peft_rank: int = field(default=32, metadata={"help": "LoRA adapter rank (r)."})
-    lora_alpha: int = 64
     hf_hub_repo_id: str | None = None
     run_test: bool = field(
         default=False,
@@ -171,11 +170,9 @@ def main() -> None:
     logger.info(
         f"Base model trainable params:\n{print_trainable_parameters(base_model)}"
     )
-    lora_model = build_peft_model(
-        base_model, training_args.peft_rank, training_args.lora_alpha
-    )
+    lora_model = build_peft_model(base_model, training_args.peft_rank)
     logger.info(
-        f"LoRA model (peft_rank={training_args.peft_rank}, lora_alpha={training_args.lora_alpha}) trainable params:\n{print_trainable_parameters(lora_model)}"
+        f"LoRA model (peft_rank={training_args.peft_rank}) trainable params:\n{print_trainable_parameters(lora_model)}"
     )
 
     # ---------- Train ----------

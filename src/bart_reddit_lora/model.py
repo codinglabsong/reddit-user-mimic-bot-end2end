@@ -13,7 +13,6 @@ def build_base_model(
 def build_peft_model(
     base_model: BartForConditionalGeneration,
     r: int = 8,
-    lora_alpha: int = 16,
     lora_dropout: float = 0.1,
     bias: str = "none",
     target_modules: list[str] = ("q_proj", "k_proj", "v_proj", "o_proj", "fc1", "fc2"),
@@ -21,7 +20,7 @@ def build_peft_model(
 ) -> PeftModel:
     config = LoraConfig(
         r=r,
-        lora_alpha=lora_alpha,
+        lora_alpha=r * 2,
         target_modules=list(target_modules),
         lora_dropout=lora_dropout,
         bias=bias,
