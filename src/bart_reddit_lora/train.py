@@ -74,7 +74,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     label_names: List[str] = field(default_factory=lambda: ["labels"])
 
     # additional custom args
-    peft_rank: int = field(default=32, metadata={"help": "LoRA adapter rank (r)."})
+    peft_rank: int = field(default=128, metadata={"help": "LoRA adapter rank (r)."})
     hf_hub_repo_id: str | None = None
     run_test: bool = field(
         default=False,
