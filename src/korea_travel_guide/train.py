@@ -2,7 +2,6 @@ import logging
 import random
 import numpy as np
 import torch
-from contextlib import nullcontext
 from datasets import load_dataset
 from dataclasses import dataclass, field
 from transformers import (
@@ -10,13 +9,13 @@ from transformers import (
     Seq2SeqTrainingArguments,
     DataCollatorForSeq2Seq,
     Seq2SeqTrainer,
+    EarlyStoppingCallback,
 )
 from typing import List
 from pathlib import Path
 from korea_travel_guide.utils import load_environ_vars, print_trainable_parameters
 from korea_travel_guide.model import build_base_model, build_peft_model
 from korea_travel_guide.data import tokenize_and_format
-from korea_travel_guide.evaluation import build_compute_metrics
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
@@ -38,6 +37,7 @@ class DataArgs:
         default=False, metadata={"help": "If True, ignore CSVs and load SQuAD instead."}
     )
 
+
 # training & LoRA extras — extend HF’s own Seq2SeqTrainingArguments
 @dataclass
 class CustomTrainingArgs(Seq2SeqTrainingArguments):
@@ -46,22 +46,25 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
         default="outputs/bart-base-korea-travel-guide-lora",
         metadata={"help": "Prefix folder for all checkpoints/run logs."},
     )
-    eval_strategy: str = "epoch"
-    save_strategy: str = "epoch"
-    logging_steps: int = 50
-    learning_rate: float = 1e-4
-    lr_scheduler_type: str = "linear"
-    warmup_ratio: float = 0.05
     num_train_epochs: int = 6
     per_device_train_batch_size: int = 8
     per_device_eval_batch_size: int = 16
+    learning_rate: float = 7e-5
+    lr_scheduler_type: str = "cosine"
+    warmup_ratio: float = 0.1
     max_grad_norm: float = 0.5
     label_smoothing_factor: float = 0.1
-    # weight_decay: float = 0.01
-    generation_max_length: int = 384
+    weight_decay: float = 0.01
+
+    eval_strategy: str = "epoch"
+    save_strategy: str = "epoch"
+    logging_steps: int = 50
     save_total_limit: int = 2
+    load_best_model_at_end: bool = True
+    metric_for_best_model: str = "eval/loss"
+    greater_is_better: bool = False
+
     fp16: bool = True
-    predict_with_generate: bool = True
     push_to_hub: bool = False
     report_to: str = "wandb"
     run_name: str = field(
@@ -91,10 +94,6 @@ def parse_args() -> tuple[DataArgs, CustomTrainingArgs]:
     # validations
     if training_args.push_to_hub and not training_args.hf_hub_repo_id:
         parser.error("--hf_hub_repo_id is required when --push_to_hub is set")
-
-    # # isolate each run’s artefacts (good for sweeps)
-    # run_id = os.environ.get("WANDB_RUN_ID", uuid4().hex[:8])
-    # training_args.output_dir = f"{training_args.output_dir}/{run_id}"
 
     # set wandb for logging
     training_args.report_to = "wandb"
@@ -130,14 +129,13 @@ def main() -> None:
     # ---------- Data Preprocessing ----------
     # load either CSVs or SQuAD for a quick pipeline sanity check
     if data_args.use_squad:
-        # 1) pull down SQuAD  
+        # 1) pull down SQuAD
         raw = load_dataset("squad")
+
         # 2) map to simple Q/A pairs (first answer only)
         def to_qa(ex):
-            return {
-                "question": ex["question"],
-                "answer": ex["answers"]["text"][0]
-            }
+            return {"question": ex["question"], "answer": ex["answers"]["text"][0]}
+
         ds = raw.map(to_qa, remove_columns=raw["train"].column_names)
     else:
         # load from your processed CSVs
@@ -198,7 +196,7 @@ def main() -> None:
         eval_dataset=ds_tok["validation"],
         tokenizer=tok,
         data_collator=data_collator,
-        # compute_metrics=build_compute_metrics(tok),
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=2)],
     )
 
     trainer.train()

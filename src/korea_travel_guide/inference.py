@@ -1,6 +1,5 @@
 import logging
 import torch
-from contextlib import nullcontext
 from dataclasses import dataclass, field
 from datasets import load_dataset
 from transformers import (
@@ -33,6 +32,10 @@ class InferenceArgs:
     texts: list[str] = field(
         default_factory=list,
         metadata={"help": "One or more input texts for `predict` mode."},
+    )
+    num_process_workers: int = field(
+        default=2,
+        metadata={"help": "Number of workers to parallelize n-gram counting."},
     )
     use_sdpa_attention: bool = field(
         default=True, metadata={"help": "Enable Sdpa for mem-efficient kernel."}
@@ -82,12 +85,13 @@ def main():
                 output_dir="outputs/inference",
                 per_device_eval_batch_size=inf_args.batch_size,
                 predict_with_generate=True,
+                generation_max_length=384,
                 report_to=[],
             ),
             eval_dataset=ds_tok["test"],
             data_collator=data_collator,
             tokenizer=tok,
-            compute_metrics=build_compute_metrics(tok),
+            compute_metrics=build_compute_metrics(tok, inf_args.num_process_workers),
         )
 
         pred_output = trainer.predict(ds_tok["test"])
@@ -106,14 +110,19 @@ def main():
         )
         enc = {k: v.to(device) for k, v in enc.items()}
 
-        # fast batched generate
+        # fast batched generate (with arguments for higher quality generations)
         out = model.generate(
             **enc,
-            max_length=512,
-            num_beams=5,
-            early_stopping=True,
-            length_penalty=1.0,
-            repetition_penalty=1.1,
+            max_length=200,
+            num_beams=5,  # improves quality
+            do_sample=True,  # add stochasticity
+            length_penalty=1.2,  # >1 favors longer answers
+            repetition_penalty=1.3,  # >1 penalizes reuse of the same token
+            no_repeat_ngram_size=3,  # block exact n-gram repeats
+            top_p=0.9,  # nucleus sampling for diversity
+            temperature=0.8,  # nucleus sampling for diversity
+            early_stopping=True,  # stop on EOS to avoid garbage at the end
+            eos_token_id=tok.eos_token_id,
         )
 
         decoded = tok.batch_decode(out, skip_special_tokens=True)
