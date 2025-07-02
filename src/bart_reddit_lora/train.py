@@ -43,7 +43,7 @@ class DataArgs:
 class CustomTrainingArgs(Seq2SeqTrainingArguments):
     # overriding the hf defaults
     output_dir: str = field(
-        default="outputs/bart-base-korea-travel-guide-lora",
+        default="outputs/bart-base-reddit-lora",
         metadata={"help": "Prefix folder for all checkpoints/run logs."},
     )
     num_train_epochs: int = 6

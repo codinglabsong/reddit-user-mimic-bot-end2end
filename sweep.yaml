@@ -1,7 +1,7 @@
-# sweep spec for Korea-Travel-Guide BART
+# sweep spec for bart-base-reddit-lora
 program: scripts/train.py
 
-project: bart-base-korea-travel-guide-lora
+project: bart-base-reddit-lora
 entity:  codinglabsong-keio-jp
 
 method: bayes # {grid | random | bayes}

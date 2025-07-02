@@ -26,7 +26,7 @@ def print_trainable_parameters(model: PreTrainedModel) -> None:
     return f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param:.2f}"
 
 
-def load_environ_vars(wandb_project: str = "bart-base-korea-travel-guide-lora"):
+def load_environ_vars(wandb_project: str = "bart-base-reddit-lora"):
     # hf hub
     token = os.getenv("HUGGINGFACE_TOKEN")
     if token:

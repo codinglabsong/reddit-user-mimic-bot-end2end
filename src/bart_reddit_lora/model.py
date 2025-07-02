@@ -34,7 +34,7 @@ def build_peft_model(
 
 def load_peft_model_for_inference(
     base_model: BartForConditionalGeneration,
-    adapter_path: str = "outputs/bart-base-korea-travel-guide-lora",
+    adapter_path: str = "outputs/bart-base-reddit-lora",
 ) -> PeftModel:
     inference_model = PeftModel.from_pretrained(base_model, adapter_path).eval()
     return inference_model
