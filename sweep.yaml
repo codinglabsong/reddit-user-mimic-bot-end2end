@@ -4,7 +4,7 @@ name: bart-base-reddit-lora-sweep
 
 method: bayes # {grid | random | bayes}
 metric: # what to optimise
-  name: eval_loss # must match the key in .evaluate() returns
+  name: eval/loss # must match the key in .evaluate() returns
   goal: minimize
 
 parameters:
