@@ -113,7 +113,7 @@ def main():
         # fast batched generate (with arguments for higher quality generations)
         out = model.generate(
             **enc,
-            max_length=200,
+            max_length=500,
             num_beams=5,  # improves quality
             do_sample=True,  # add stochasticity
             length_penalty=1.2,  # >1 favors longer answers
