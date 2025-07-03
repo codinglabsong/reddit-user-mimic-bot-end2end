@@ -153,7 +153,7 @@ def main() -> None:
         out = model.generate(
             **enc,
             max_length=128,
-            num_beams=5,  # improves quality
+            num_beams=10,  # improves quality
             do_sample=True,  # add stochasticity
             length_penalty=1.2,  # >1 favors longer answers
             repetition_penalty=1.3,  # >1 penalizes reuse of the same token
