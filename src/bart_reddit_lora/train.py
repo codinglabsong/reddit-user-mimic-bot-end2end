@@ -63,7 +63,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     num_train_epochs: int = 12
     per_device_train_batch_size: int = 32
     per_device_eval_batch_size: int = 64
-    learning_rate: float = 6e-5
+    learning_rate: float = 3e-5
     lr_scheduler_type: str = "cosine"
     warmup_ratio: float = 0.1
     max_grad_norm: float = 0.5
