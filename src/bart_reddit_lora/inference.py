@@ -1,7 +1,15 @@
+"""
+Inference utilities for BART-based Reddit LoRA model.
+
+Provides command-line entrypoint to evaluate on a test set or generate predictions
+for raw input texts with configurable settings.
+"""
+
 import logging
 import torch
 from dataclasses import dataclass, field
-from datasets import load_dataset
+from datasets import load_dataset, DatasetDict
+from typing import List, Dict, Any
 from transformers import (
     HfArgumentParser,
     AutoTokenizer,
@@ -20,6 +28,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class InferenceArgs:
+    """
+    Command-line arguments for inference.
+
+    Attributes:
+        mode: Either 'test' to evaluate on the test dataset or 'predict' to generate outputs for raw texts.
+        batch_size: Batch size used for evaluation or prediction.
+        texts: List of input strings when running in 'predict' mode.
+        num_process_workers: Number of processes for parallel metric computation.
+        use_sdpa_attention: Whether to enable SDPA attention for memory efficiency.
+    """
     mode: str = field(
         default="test",
         metadata={
@@ -42,13 +60,25 @@ class InferenceArgs:
     )
 
 
-def parse_args():
+def parse_args() -> InferenceArgs:
+    """
+    Parse command-line arguments into an InferenceArgs dataclass.
+
+    Returns:
+        An instance of InferenceArgs with user-specified settings.
+    """
     parser = HfArgumentParser(InferenceArgs)
     (inf_args,) = parser.parse_args_into_dataclasses()
     return inf_args
 
 
-def main():
+def main() -> None:
+    """
+    Main entrypoint for inference.
+
+    Depending on `mode`, either evaluates model on the test set
+    or generates predictions for provided raw texts.
+    """
     logging.basicConfig(level=logging.INFO)
     load_environ_vars()
     inf_args = parse_args()

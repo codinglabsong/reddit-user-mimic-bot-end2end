@@ -1,3 +1,8 @@
+"""
+Module for loading a LoRA fine-tuned BART model and serving
+an interactive Gradio interface for text generation.
+"""
+
 import torch
 import gradio as gr
 from transformers import AutoTokenizer
@@ -5,9 +10,14 @@ from transformers import BartForConditionalGeneration
 from peft import PeftModel
 
 
-def load_model():
+def load_model() -> tuple[AutoTokenizer, PeftModel, torch.device]:
     """
-    Load environment variables, tokenizer, and the fine-tuned LoRA model.
+    Load tokenizer and LoRA-enhanced model onto available device.
+
+    Returns:
+        tokenizer (AutoTokenizer): Tokenizer for text processing.
+        model (PeftModel): Fine-tuned LoRA BART model in eval mode.
+        device (torch.device): Computation device (GPU if available, else CPU).
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -33,7 +43,13 @@ tokenizer, model, device = load_model()
 
 def predict(text: str) -> str:
     """
-    Generate a response for a single input text.
+    Generate a text response given an input prompt.
+
+    Args:
+        text (str): The input prompt string.
+
+    Returns:
+        str: The decoded model output.
     """
     # Tokenize and move inputs to device
     inputs = tokenizer(
@@ -62,7 +78,10 @@ def predict(text: str) -> str:
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 
-def main():
+def main() -> None:
+    """
+    Launch Gradio web interface for interactive model inference.
+    """
     interface = gr.Interface(
         fn=predict,
         inputs=gr.Textbox(lines=5, placeholder="Ask a Question", label="Your Question"),

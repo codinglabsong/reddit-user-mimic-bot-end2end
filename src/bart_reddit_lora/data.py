@@ -1,3 +1,8 @@
+"""
+Module for scraping Reddit Q/A pairs, cleaning text, splitting data,
+and tokenizing for model training.
+"""
+
 import os
 import re
 import time
@@ -7,10 +12,22 @@ from datasets import DatasetDict
 from pathlib import Path
 from praw import Reddit
 from transformers import AutoTokenizer
-from typing import Union, Tuple
+from typing import Dict, List, Any, Union, Tuple
+import pandas as pd
 
 
-def init_reddit() -> None:
+def init_reddit() -> Reddit:
+    """
+    Initialize and return a Reddit client using environment variables.
+
+    Environment Variables:
+        REDDIT_CLIENT_ID: Reddit API client ID.
+        REDDIT_CLIENT_SECRET: Reddit API client secret.
+        REDDIT_USER_AGENT: User agent string for Reddit API.
+
+    Returns:
+        An authenticated praw.Reddit instance.
+    """
     return Reddit(
         client_id=os.environ["REDDIT_CLIENT_ID"],
         client_secret=os.environ["REDDIT_CLIENT_SECRET"],
@@ -19,6 +36,15 @@ def init_reddit() -> None:
 
 
 def clean_text(txt: str) -> str:
+    """
+    Clean a text string by removing HTML, code fences, URLs, emojis, quotes, and extra whitespace.
+
+    Args:
+        txt: Raw text to be cleaned.
+
+    Returns:
+        A cleaned text string.
+    """
     # strip HTML/Markdown
     txt = BeautifulSoup(txt, "html.parser").get_text()
     # remove code fences
@@ -36,7 +62,16 @@ def clean_text(txt: str) -> str:
     return txt
 
 
-def scrape(sub_size_map):
+def scrape(sub_size_map: Dict[str, int]) -> List[Dict[str, Any]]:
+    """
+    Scrape top posts and their highest-quality comments from specified subreddits.
+
+    Args:
+        sub_size_map: Mapping of subreddit names to sample sizes.
+
+    Returns:
+        List of dicts each containing 'id', 'subreddit', 'question', 'answer', and 'url'.
+    """
     reddit = init_reddit()
     qa = []  # the Q/A posts to train the model
 
@@ -149,7 +184,16 @@ def scrape(sub_size_map):
     return qa
 
 
-def preprocess(qa_raw):
+def preprocess(qa_raw: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Apply text cleaning to raw Q/A entries.
+
+    Args:
+        qa_raw: List of dicts with raw 'question' and 'answer' fields.
+
+    Returns:
+        Cleaned list with same keys plus cleaned text.
+    """
     cleaned = []
     for item in qa_raw:
         q = clean_text(item["question"])
@@ -166,7 +210,14 @@ def preprocess(qa_raw):
     return cleaned
 
 
-def split_and_save(df, out_dir: Union[str, Path]):
+def split_and_save(df: pd.DataFrame, out_dir: Union[str, Path]) -> None:
+    """
+    Shuffle, split, and save DataFrame into train/validation/test CSV files.
+
+    Args:
+        df: DataFrame containing Q/A data.
+        out_dir: Directory path to save CSV files.
+    """
     # create the dir path if not existing
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -195,6 +246,18 @@ def tokenize_and_format(
     max_input_length: int = 512,  # max 1024 1024
     max_target_length: int = 128,  # max 1024 800
 ) -> Tuple[DatasetDict, AutoTokenizer]:
+    """
+    Tokenize and format a DatasetDict for model training.
+
+    Args:
+        ds: DatasetDict with 'question' and 'answer' columns.
+        checkpoint: Pretrained tokenizer checkpoint identifier.
+        max_input_length: Maximum input token length.
+        max_target_length: Maximum target token length.
+
+    Returns:
+        Tuple of tokenized DatasetDict and the tokenizer.
+    """
     tok = AutoTokenizer.from_pretrained(checkpoint)
 
     def _preprocess_batch(examples):

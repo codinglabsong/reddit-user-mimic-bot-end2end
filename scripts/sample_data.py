@@ -1,11 +1,22 @@
+"""Utilities for creating a reproducible smoke‐test sample from a larger CSV dataset."""
+
 import argparse
 import sys
 import pandas as pd
 from pathlib import Path
 
 
-def parse_args():
-    """Parse command-line arguments for sampling data for smoke tests."""
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command-line arguments.
+
+    Returns:
+        argparse.Namespace:  
+            - input (str): Path to the full CSV file to sample from.  
+            - output (str): Path where the sampled CSV will be written.  
+            - n (int): Number of examples to sample.  
+            - seed (int): Random seed for reproducibility.
+    """
     p = argparse.ArgumentParser(
         description="Create a smoke-test sample from a larger CSV"
     )
@@ -30,7 +41,23 @@ def parse_args():
     return p.parse_args()
 
 
-def sample_dataset(input_csv: Path, output_csv: Path, sample_size: int, seed: int = 42):
+def sample_dataset(
+    input_csv: Path, 
+    output_csv: Path,
+    sample_size: int, 
+    seed: int = 42):
+    """
+    Load a CSV, draw a random sample, and write it out.
+
+    Args:
+        input_csv (Path): Path to the source CSV file.
+        output_csv (Path): Path where the sampled CSV will be saved.
+        sample_size (int): Number of rows to sample without replacement.
+        seed (int, optional): Random seed for sampling. Defaults to 42.
+
+    Raises:
+        SystemExit: If `sample_size` exceeds the number of available rows.
+    """
     # load full train set
     df = pd.read_csv(input_csv)
     total = len(df)
@@ -51,6 +78,9 @@ def sample_dataset(input_csv: Path, output_csv: Path, sample_size: int, seed: in
 
 
 def main():
+    """
+    Entry point: parse arguments and run the sampling routine.
+    """
     cfg = parse_args()
 
     sample_dataset(cfg.input, cfg.output, cfg.n, cfg.seed)

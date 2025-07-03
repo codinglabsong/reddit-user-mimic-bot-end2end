@@ -1,3 +1,7 @@
+"""
+Utilities for environment configuration and reporting model trainable parameters.
+"""
+
 import logging
 import os
 from dotenv import load_dotenv
@@ -11,10 +15,14 @@ logger = logging.getLogger(__name__)
 
 def print_trainable_parameters(model: PreTrainedModel) -> None:
     """
-    Prints the number of trainable parameters in the model.
+    Compute and return a summary of trainable vs. total parameters in a model.
 
     Args:
-        model: any HF Transformers model
+        model (PreTrainedModel): A Hugging Face Transformers model instance.
+
+    Returns:
+        str: Formatted string showing number of trainable parameters, total parameters,
+             and percentage of parameters that are trainable.
     """
     trainable_params = 0
     all_param = 0
@@ -27,6 +35,15 @@ def print_trainable_parameters(model: PreTrainedModel) -> None:
 
 
 def load_environ_vars(wandb_project: str = "bart-base-reddit-lora"):
+    """
+    Load and set up environment variables for Hugging Face Hub and Weights & Biases.
+
+    - Logs into Hugging Face Hub if HUGGINGFACE_TOKEN is set.
+    - Sets the WANDB_PROJECT environment variable.
+
+    Args:
+        wandb_project (str): The default W&B project name to set.
+    """
     # hf hub
     token = os.getenv("HUGGINGFACE_TOKEN")
     if token:
@@ -37,3 +54,4 @@ def load_environ_vars(wandb_project: str = "bart-base-reddit-lora"):
 
     # wandb
     os.environ["WANDB_PROJECT"] = wandb_project
+    logger.info(f"W&B project set to '{wandb_project}'")

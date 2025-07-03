@@ -1,3 +1,7 @@
+"""
+Download Reddit Q&A posts, preprocess them, and split into train/validation/test sets.
+"""
+
 import json
 import pandas as pd
 import argparse
@@ -5,8 +9,16 @@ from pathlib import Path
 from bart_reddit_lora.data import scrape, preprocess, split_and_save
 
 
-def parse_args():
-    """Parse command-line arguments for downloading and preprocessing data."""
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command-line arguments for data scraping and preprocessing.
+
+    Returns:
+        argparse.Namespace: Parsed arguments with attributes:
+            config (str): Path to subreddit size map JSON.
+            raw_dir (str): Directory to save raw data.
+            out_dir (str): Directory to save processed data.
+    """
     p = argparse.ArgumentParser(prog="download-data")
 
     p.add_argument("--config", default="data/subreddit_size_map.json")
@@ -16,7 +28,17 @@ def parse_args():
     return p.parse_args()
 
 
-def main():
+def main() -> None:
+    """
+    Execute the data pipeline: scrape Reddit posts, preprocess, and split into datasets.
+
+    Steps:
+    1. Parse arguments for paths and config.
+    2. Create directories for raw and processed data.
+    3. Load subreddit size map from JSON.
+    4. Scrape posts and save raw JSON.
+    5. Preprocess scraped data and split into train/val/test sets.
+    """
     cfg = parse_args()
 
     # create the paths for dataset dirs

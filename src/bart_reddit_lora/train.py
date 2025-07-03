@@ -1,3 +1,11 @@
+"""
+Fine-tune a BART model with LoRA on Reddit Q&A data using Hugging Face Transformers.
+
+This module handles argument parsing, data loading (CSV or SQuAD), tokenization,
+model initialization (with optional SDPA attention), training with early stopping,
+and optional evaluation/pushing to the Hugging Face Hub.
+"""
+
 import logging
 import random
 import numpy as np
@@ -11,7 +19,7 @@ from transformers import (
     Seq2SeqTrainer,
     EarlyStoppingCallback,
 )
-from typing import List
+from typing import Tuple, List, Optional, Dict
 from pathlib import Path
 from bart_reddit_lora.utils import load_environ_vars, print_trainable_parameters
 from bart_reddit_lora.model import build_base_model, build_peft_model
@@ -26,6 +34,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 @dataclass
 class DataArgs:
+    """
+    Configuration for data file paths and loading options.
+    """
     train_file: Path = PROJECT_ROOT / "data/processed/train.csv"
     validation_file: Path = PROJECT_ROOT / "data/processed/val.csv"
     test_file: Path = PROJECT_ROOT / "data/processed/test.csv"
@@ -41,14 +52,17 @@ class DataArgs:
 # training & LoRA extras — extend HF’s own Seq2SeqTrainingArguments
 @dataclass
 class CustomTrainingArgs(Seq2SeqTrainingArguments):
+    """
+    Extends Seq2SeqTrainingArguments with LoRA-specific and project defaults.
+    """
     # overriding the hf defaults
     output_dir: str = field(
         default="outputs/bart-base-reddit-lora",
         metadata={"help": "Prefix folder for all checkpoints/run logs."},
     )
     num_train_epochs: int = 12
-    per_device_train_batch_size: int = 8
-    per_device_eval_batch_size: int = 16
+    per_device_train_batch_size: int = 32
+    per_device_eval_batch_size: int = 64
     learning_rate: float = 6e-5
     lr_scheduler_type: str = "cosine"
     warmup_ratio: float = 0.1
@@ -86,7 +100,12 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
 
 
 def parse_args() -> tuple[DataArgs, CustomTrainingArgs]:
-    """Parse CLI → three dataclass objects in one line."""
+    """
+    Parse command-line arguments into DataArgs and CustomTrainingArgs.
+
+    Raises:
+        SystemExit: if `--push_to_hub` is set without `--hf_hub_repo_id`.
+    """
     parser = HfArgumentParser((DataArgs, CustomTrainingArgs))
     data_args, training_args = parser.parse_args_into_dataclasses()
 
