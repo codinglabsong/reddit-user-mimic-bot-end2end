@@ -192,8 +192,8 @@ def split_and_save(df, out_dir: Union[str, Path]):
 def tokenize_and_format(
     ds: DatasetDict,
     checkpoint: str = "facebook/bart-base",
-    max_input_length: int = 1024,  # max 1024 224
-    max_target_length: int = 800,  # max 1024
+    max_input_length: int = 512,  # max 1024 1024
+    max_target_length: int = 128,  # max 1024 800
 ) -> Tuple[DatasetDict, AutoTokenizer]:
     tok = AutoTokenizer.from_pretrained(checkpoint)
 

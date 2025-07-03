@@ -46,7 +46,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
         default="outputs/bart-base-reddit-lora",
         metadata={"help": "Prefix folder for all checkpoints/run logs."},
     )
-    num_train_epochs: int = 6
+    num_train_epochs: int = 12
     per_device_train_batch_size: int = 8
     per_device_eval_batch_size: int = 16
     learning_rate: float = 6e-5
