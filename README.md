@@ -6,3 +6,11 @@ wandb sweep sweep.yaml
 # 2 (start an agent) – one per GPU / machine
 wandb agent <ENTITY>/<PROJECT>/<SWEEP-ID>
 ```
+
+sdpa attention
+
+sweeps
+
+improved inference
+
+gradio

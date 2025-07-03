@@ -8,8 +8,7 @@ for raw input texts with configurable settings.
 import logging
 import torch
 from dataclasses import dataclass, field
-from datasets import load_dataset, DatasetDict
-from typing import List, Dict, Any
+from datasets import load_dataset
 from transformers import (
     HfArgumentParser,
     AutoTokenizer,
@@ -21,7 +20,6 @@ from pathlib import Path
 from bart_reddit_lora.utils import load_environ_vars
 from bart_reddit_lora.model import build_base_model, load_peft_model_for_inference
 from bart_reddit_lora.data import tokenize_and_format
-from bart_reddit_lora.evaluation import build_compute_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +35,7 @@ class InferenceArgs:
         texts: List of input strings when running in 'predict' mode.
         use_sdpa_attention: Whether to enable SDPA attention for memory efficiency.
     """
+
     mode: str = field(
         default="test",
         metadata={
@@ -110,17 +109,16 @@ def main() -> None:
                 output_dir="outputs/inference",
                 per_device_eval_batch_size=inf_args.batch_size,
                 predict_with_generate=False,
-                # generation_max_length=640,
                 report_to=[],
             ),
             eval_dataset=ds_tok["test"],
             data_collator=data_collator,
             tokenizer=tok,
-            # compute_metrics=build_compute_metrics(tok),
         )
         metrics = trainer.evaluate(ds_tok["test"])
         logger.info(f"Test metrics: {metrics}")
-        
+
+        # manually get loss
         test_loader = trainer.get_eval_dataloader()
         model = trainer.model
         device = trainer.args.device
@@ -140,7 +138,7 @@ def main() -> None:
     elif inf_args.mode == "predict":
         if not inf_args.texts:
             raise ValueError("`--texts` is required in `predict` mode.")
-        # batch‐tokenize your inputs
+        # batch‐tokenize inputs
         enc = tok(
             inf_args.texts,
             return_tensors="pt",
@@ -149,7 +147,7 @@ def main() -> None:
         )
         enc = {k: v.to(device) for k, v in enc.items()}
 
-        # fast batched generate (with arguments for higher quality generations)
+        # fast batched generate
         out = model.generate(
             **enc,
             max_length=128,

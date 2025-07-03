@@ -19,7 +19,7 @@ from transformers import (
     Seq2SeqTrainer,
     EarlyStoppingCallback,
 )
-from typing import Tuple, List, Optional, Dict
+from typing import List
 from pathlib import Path
 from bart_reddit_lora.utils import load_environ_vars, print_trainable_parameters
 from bart_reddit_lora.model import build_base_model, build_peft_model
@@ -37,15 +37,13 @@ class DataArgs:
     """
     Configuration for data file paths and loading options.
     """
+
     train_file: Path = PROJECT_ROOT / "data/processed/train.csv"
     validation_file: Path = PROJECT_ROOT / "data/processed/val.csv"
     test_file: Path = PROJECT_ROOT / "data/processed/test.csv"
     train_sample_file: Path = PROJECT_ROOT / "data/processed/train_sample.csv"
     train_sample: bool = field(
         default=False, metadata={"help": "Use the mini CSV for smoke tests if True."}
-    )
-    use_squad: bool = field(
-        default=False, metadata={"help": "If True, ignore CSVs and load SQuAD instead."}
     )
 
 
@@ -55,6 +53,7 @@ class CustomTrainingArgs(Seq2SeqTrainingArguments):
     """
     Extends Seq2SeqTrainingArguments with LoRA-specific and project defaults.
     """
+
     # overriding the hf defaults
     output_dir: str = field(
         default="outputs/bart-base-reddit-lora",
@@ -145,41 +144,18 @@ def main() -> None:
     logger.info(f"Set seed: {training_args.seed}")
 
     # ---------- Data Preprocessing ----------
-    # load either CSVs or SQuAD for a quick pipeline sanity check
-    if data_args.use_squad:
-        # 1) pull down SQuAD
-        raw = load_dataset("squad")
+    # load and tokenize dataset
+    data_files = {
+        "train": str(
+            data_args.train_sample_file
+            if data_args.train_sample
+            else data_args.train_file
+        ),
+        "validation": str(data_args.validation_file),
+        "test": str(data_args.test_file),
+    }
 
-        # 2) map to simple Q/A pairs (first answer only)
-        def to_qa(ex):
-            return {"question": ex["question"], "answer": ex["answers"]["text"][0]}
-
-        ds = raw.map(to_qa, remove_columns=raw["train"].column_names)
-    else:
-        # load from your processed CSVs
-        data_files = {
-            "train": str(
-                data_args.train_sample_file
-                if data_args.train_sample
-                else data_args.train_file
-            ),
-            "validation": str(data_args.validation_file),
-            "test": str(data_args.test_file),
-        }
-        ds = load_dataset("csv", data_files=data_files)
-    # # load and tokenize dataset
-    # # load CSVs
-    # data_files = {
-    #     "train": str(
-    #         data_args.train_sample_file
-    #         if data_args.train_sample
-    #         else data_args.train_file
-    #     ),
-    #     "validation": str(data_args.validation_file),
-    #     "test": str(data_args.test_file),
-    # }
-
-    # ds = load_dataset("csv", data_files=data_files)
+    ds = load_dataset("csv", data_files=data_files)
     ds_tok, tok = tokenize_and_format(ds)
 
     # initialize base model and LoRA
