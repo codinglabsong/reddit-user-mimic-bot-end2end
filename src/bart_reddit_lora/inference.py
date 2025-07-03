@@ -35,7 +35,6 @@ class InferenceArgs:
         mode: Either 'test' to evaluate on the test dataset or 'predict' to generate outputs for raw texts.
         batch_size: Batch size used for evaluation or prediction.
         texts: List of input strings when running in 'predict' mode.
-        num_process_workers: Number of processes for parallel metric computation.
         use_sdpa_attention: Whether to enable SDPA attention for memory efficiency.
     """
     mode: str = field(
@@ -50,10 +49,6 @@ class InferenceArgs:
     texts: list[str] = field(
         default_factory=list,
         metadata={"help": "One or more input texts for `predict` mode."},
-    )
-    num_process_workers: int = field(
-        default=2,
-        metadata={"help": "Number of workers to parallelize n-gram counting."},
     )
     use_sdpa_attention: bool = field(
         default=True, metadata={"help": "Enable Sdpa for mem-efficient kernel."}
@@ -114,19 +109,33 @@ def main() -> None:
             args=Seq2SeqTrainingArguments(
                 output_dir="outputs/inference",
                 per_device_eval_batch_size=inf_args.batch_size,
-                predict_with_generate=True,
-                generation_max_length=384,
+                predict_with_generate=False,
+                # generation_max_length=640,
                 report_to=[],
             ),
             eval_dataset=ds_tok["test"],
             data_collator=data_collator,
             tokenizer=tok,
-            compute_metrics=build_compute_metrics(tok, inf_args.num_process_workers),
+            # compute_metrics=build_compute_metrics(tok),
         )
-
-        pred_output = trainer.predict(ds_tok["test"])
-        metrics = pred_output.metrics
+        metrics = trainer.evaluate(ds_tok["test"])
         logger.info(f"Test metrics: {metrics}")
+        
+        test_loader = trainer.get_eval_dataloader()
+        model = trainer.model
+        device = trainer.args.device
+
+        losses = []
+        with torch.no_grad():
+            for batch in test_loader:
+                # move inputs → device
+                batch = {k: v.to(device) for k, v in batch.items()}
+                # forward pass: passing in labels returns `loss`
+                outputs = model(**batch)
+                losses.append(outputs.loss.item())
+
+        mean_loss = sum(losses) / len(losses)
+        logger.info(f"Test loss: {mean_loss:.4f}")
 
     elif inf_args.mode == "predict":
         if not inf_args.texts:

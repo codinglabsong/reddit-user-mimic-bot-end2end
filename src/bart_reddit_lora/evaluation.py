@@ -1,87 +1,65 @@
 """
-Metrics computation module for sequence-to-sequence models.
-
-This module provides a factory function to create a `compute_metrics` callable
-for Hugging Face's `Trainer`. The returned function computes ROUGE-L, BLEU, and
-BERTScore (F1) on decoded model predictions versus labels.
+Module for building a ROUGE-L metric computation function
+for Hugging Face Seq2SeqTrainer.
 """
 
 import numpy as np
 import evaluate
-from transformers import EvalPrediction
-from typing import Callable, Dict, Any, Union
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, EarlyStoppingCallback, PreTrainedTokenizerBase, EvalPrediction
+from typing import Callable, Dict
 
 
-def build_compute_metrics(
-    tok: PreTrainedTokenizerBase, 
-    num_process_workers: int = 2
-) -> Callable[[EvalPrediction], Dict[str, float]]:
+def build_compute_metrics(tok: PreTrainedTokenizerBase) -> Callable[[EvalPrediction], Dict[str, float]]:
     """
-    Create a metrics computation function for use with Hugging Face `Trainer`.
+    Create a compute_metrics function for Seq2SeqTrainer that returns the ROUGE-L score.
 
     Args:
-        tokenizer: A Hugging Face tokenizer for decoding predictions/labels.
-        num_process_workers: Number of worker processes for metric computation.
+        tok (PreTrainedTokenizerBase): Tokenizer for decoding predictions and labels.
 
     Returns:
-        A callable that takes an `EvalPrediction` and returns a dict with:
-          - "rougeL": ROUGE-L score (%)
-          - "bleu": BLEU score (%)
-          - "bertscore_f1": average BERTScore F1
+        Callable[[EvalPrediction], Dict[str, float]]: Function computing "rougeL" percentage.
     """
-    rouge = evaluate.load("rouge")  # longest-substring overlap
-    bleu = evaluate.load("bleu")  # n-gram precision
-    bertscore = evaluate.load("bertscore")  # semantic similarity
+    rouge = evaluate.load("rouge", keep_in_memory=True)   # keep_in_memory avoids disk I/O
 
-    def _compute_metrics(eval_pred: EvalPrediction) -> Dict[str, float]:
+    # 2️⃣  Metric fn: decode → strip → compute → return only rougeL
+    def compute_metrics(eval_pred):
         """
-        Compute ROUGE-L, BLEU, and BERTScore given model predictions and labels.
+        Decode predictions and references, compute ROUGE-L, and return as percentage.
 
         Args:
-            eval_pred: An `EvalPrediction` with `predictions` and `label_ids`.
+            eval_pred (EvalPrediction): Object with .predictions and .label_ids.
 
         Returns:
-            A dict mapping metric names to rounded scores.
+            Dict[str, float]: Dictionary with key "rougeL" and its percentage score.
         """
-        preds, labels = eval_pred.predictions, eval_pred.label_ids
-
-        # handle tuple output (some models return (generated_ids, ...))
-        if isinstance(preds, tuple):
+        preds, labels = eval_pred
+        if isinstance(preds, tuple):          # HF sometimes returns (logits, ...)
             preds = preds[0]
 
-        # decode
-        decoded_preds = tok.batch_decode(preds, skip_special_tokens=True)
+        # Replace label pad tokens (-100) so they can be decoded
         labels = np.where(labels != -100, labels, tok.pad_token_id)
-        decoded_labels = tok.batch_decode(labels, skip_special_tokens=True)
 
-        # metrics
-        rouge_l = rouge.compute(
+        decoded_preds  = tok.batch_decode(preds, skip_special_tokens=True,
+                                        clean_up_tokenization_spaces=True)
+        decoded_labels = tok.batch_decode(labels, skip_special_tokens=True,
+                                        clean_up_tokenization_spaces=True)
+
+        # Strip white-space/newlines that can hurt ROUGE scores
+        decoded_preds  = [s.strip() for s in decoded_preds]
+        decoded_labels = [s.strip() for s in decoded_labels]
+
+        score_dict = rouge.compute(
             predictions=decoded_preds,
             references=decoded_labels,
-            use_stemmer=True,
-            num_process_workers=num_process_workers,
-        )["rougeL"]
-        bleu_score = bleu.compute(
-            predictions=decoded_preds,
-            references=[[ref] for ref in decoded_labels],  # BLEU expects list-of-lists
-            smooth=True,
-            num_process_workers=num_process_workers,
-        )["bleu"]
-        bert_f1 = np.mean(
-            bertscore.compute(
-                predictions=decoded_preds,
-                references=decoded_labels,
-                lang="en",
-                num_process_workers=num_process_workers,
-            )["f1"]
+            use_stemmer=True,        # standard setting for ROUGE-* in HF evaluate
         )
 
-        # round for nice logging
-        return {
-            "rougeL": round(rouge_l * 100, 4),
-            "bleu": round(bleu_score * 100, 4),
-            "bertscore_f1": round(bert_f1, 4),
-        }
+        # HF’s rouge.compute() returns fractional scores; convert to %
+        rougeL = round(score_dict["rougeL"] * 100, 4)
 
-    return _compute_metrics
+        return {"rougeL": rougeL}
+
+    return compute_metrics
+
+
+
