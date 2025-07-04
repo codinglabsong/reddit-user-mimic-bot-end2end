@@ -1,4 +1,4 @@
-# Byte‐compiled / optimized / DLL files / .cache / .egg-info / setup
+# Byte‐compiled / optimized / DLL files / .cache / .egg-info / setup / tars
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,6 +8,7 @@ __pycache__/
 *.egg-info/
 build/
 .gradio
+*.tar.gz
 
 # secrets
 .env

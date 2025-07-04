@@ -62,8 +62,8 @@ def predict(text: str) -> str:
     # Generate with both beam search and sampling for diversity
     outputs = model.generate(
         **inputs,
-        max_length=500,
-        num_beams=5,
+        max_length=128,
+        num_beams=10,
         do_sample=True,
         length_penalty=1.2,
         repetition_penalty=1.3,
@@ -84,10 +84,17 @@ def main() -> None:
     """
     interface = gr.Interface(
         fn=predict,
-        inputs=gr.Textbox(lines=5, placeholder="Ask a Question", label="Your Question"),
-        outputs=gr.Textbox(label="Model Output"),
-        title="Bart-Reddit-LoRA Inference",
-        description="Enter your prompt and click Submit to get the model's response.",
+        inputs=gr.Textbox(
+            lines=5,
+            placeholder="Broad questions often have better results.",
+            label="Your Question",
+        ),
+        outputs=gr.Textbox(label="Mimic Bot's Comment"),
+        title="Reddit-User-Mimic-Bot Inference (Bart-LoRA)",
+        description="Enter a question you would ask on reddit, and our Mimic Bot would comment back! Have fun.",
+        examples=[
+            ["How's the politics these days?"],
+        ],
         allow_flagging="never",
     )
     interface.launch()

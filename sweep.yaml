@@ -21,7 +21,7 @@ parameters:
 run_cap: 5 # sweep run limit
 
 project: bart-base-reddit-lora
-entity: codinglabsong-keio-jp
+entity: your-wandb-username
 
 # early_terminate:
 #   type: hyperband
