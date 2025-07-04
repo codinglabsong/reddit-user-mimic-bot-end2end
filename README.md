@@ -1,6 +1,6 @@
 # Reddit User Mimic Bot
 
-Reddit User Mimic Bot is an end-to-end Python project that fine‑tunes a BART model with LoRA adapters on a scraped Reddit question‑answer dataset (4446 examples). The repository provides scripts and source code for data collection, training, and inference, along with a simple Gradio app for demo purposes.
+Reddit User Mimic Bot is an end-to-end Python project that fine‑tunes a BART model with LoRA adapters on a scraped Reddit question‑answer dataset (4446 examples). The repository provides scripts and source code for data collection, training, and inference, along with a simple Gradio app for demo purposes. The final output is a model you can ask a question to which it responds with an answer similar to comments scraped on Reddit (please read subsection Results for examples).
 
 ## Features
 - **LoRA Training** – fine-tune `facebook/bart-base` using Low-Rank Adaptation on scraped Reddit Q&A data.
