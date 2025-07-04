@@ -136,6 +136,7 @@ This project intentionally focused more on the methods and pipeline than the act
 - Upgrade the model architecture to Bart-Large.
 - Increase the LoRA rank (r).
 - Train for more epochs.
+- Use a better evaluation metric like RougeL for early stopping.
 
 ## Data Preprocessing
 
