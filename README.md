@@ -14,6 +14,10 @@ Reddit User Mimic Bot is an end-to-end Python project that fine‑tunes a BART m
 - **Reproducible Workflows** – configuration-based training scripts and environment variables. Seed set during training.
 - **Developer Tools** – linting with ruff and black, plus basic unit tests.
 
+> You can also read about this project on my blog!
+> [Part 1: Data Scraping, Preprocessing, Tokenization](https://codinglabsong.medium.com/reddit-user-mimic-bot-with-bart-lora-part-1-data-scraping-preprocessing-and-tokenization-e9f3fb0b64a2)
+> [Part 2: Train, Sweep, Review Results](https://codinglabsong.medium.com/reddit-user-mimic-bot-with-bart-lora-part-2-train-sweep-review-results-5b2acaea322c)
+
 ## Installation
 
 1. Clone this repository and install the core dependencies:
