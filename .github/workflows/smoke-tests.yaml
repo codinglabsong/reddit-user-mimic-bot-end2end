@@ -42,6 +42,16 @@ jobs:
           What is AI?,AI stands for Artificial Intelligence.
           How are you?,I am fine, thanks!
           EOF
+          cat > data/processed/val.csv << 'EOF'
+          question,answer
+          What is AI?,AI stands for Artificial Intelligence.
+          How are you?,I am fine, thanks!
+          EOF
+          cat > data/processed/test.csv << 'EOF'
+          question,answer
+          What is AI?,AI stands for Artificial Intelligence.
+          How are you?,I am fine, thanks!
+          EOF
           
       - name: Smoke-run training
         run: |
