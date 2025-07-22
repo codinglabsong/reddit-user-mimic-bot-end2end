@@ -12,7 +12,7 @@ Reddit User Mimic Bot is an end-to-end Python project that fine‑tunes a BART m
 - **Inference Utilities** – command-line interface for evaluation on test set and text generation on user input.
 - **Gradio Demo** – ready-to-deploy web app for interactive predictions. Hosted on [Huggingface Spaces](https://huggingface.co/spaces/codinglabsong/Reddit-User-Mimic-Bot).
 - **Reproducible Workflows** – configuration-based training scripts and environment variables. Seed set during training.
-- **Developer Tools** – linting with ruff and black, plus basic unit tests.
+- **Developer Tools & CI** – linting with ruff and black, unit tests with pytest, end‐to‐end smoke tests in GitHub Actions.
 
 > You can also read about this project on my blog.
 > - [Part 1: Data Scraping, Preprocessing, Tokenization](https://codinglabsong.medium.com/reddit-user-mimic-bot-with-bart-lora-part-1-data-scraping-preprocessing-and-tokenization-e9f3fb0b64a2)
