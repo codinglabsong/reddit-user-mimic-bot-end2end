@@ -1,0 +1,51 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+    env:
+      WANDB_MODE: offline
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt,requirements-dev.txt
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install -r requirements-dev.txt
+
+      - name: Run formatting, linting
+        run: |
+          pre-commit install
+          pre-commit run --all-files
+
+      - name: Run tests
+        run: pytest
+
+      - name: Prepare ultra-tiny sample dataset
+        run: |
+          mkdir -p data/processed
+          cat > data/processed/train_sample.csv << 'EOF'
+          question,answer
+          What is AI?,AI stands for Artificial Intelligence.
+          How are you?,I am fine, thanks!
+          EOF
+          
+      - name: Smoke-run training
+        run: |
+          python scripts/train.py \
+            --train_sample True \
+            --num_train_epochs 1
