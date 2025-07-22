@@ -11,10 +11,10 @@ def parse_args() -> argparse.Namespace:
     Parse command-line arguments.
 
     Returns:
-        argparse.Namespace:  
-            - input (str): Path to the full CSV file to sample from.  
-            - output (str): Path where the sampled CSV will be written.  
-            - n (int): Number of examples to sample.  
+        argparse.Namespace:
+            - input (str): Path to the full CSV file to sample from.
+            - output (str): Path where the sampled CSV will be written.
+            - n (int): Number of examples to sample.
             - seed (int): Random seed for reproducibility.
     """
     p = argparse.ArgumentParser(
@@ -41,11 +41,7 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def sample_dataset(
-    input_csv: Path, 
-    output_csv: Path,
-    sample_size: int, 
-    seed: int = 42):
+def sample_dataset(input_csv: Path, output_csv: Path, sample_size: int, seed: int = 42):
     """
     Load a CSV, draw a random sample, and write it out.
 

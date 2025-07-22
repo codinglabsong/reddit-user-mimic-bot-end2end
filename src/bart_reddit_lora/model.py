@@ -28,7 +28,14 @@ def build_peft_model(
     r: int = 8,
     lora_dropout: float = 0.1,
     bias: str = "none",
-    target_modules: Sequence[str] = ("q_proj", "k_proj", "v_proj", "o_proj", "fc1", "fc2"),
+    target_modules: Sequence[str] = (
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "fc1",
+        "fc2",
+    ),
     modules_to_save: Sequence[str] = ("lm_head",),
 ) -> PeftModel:
     """Wrap a base BART model with a LoRA adapter configuration.
