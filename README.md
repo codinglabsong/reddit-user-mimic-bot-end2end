@@ -48,7 +48,7 @@ Reddit User Mimic Bot is an end-to-end Python project that fine‑tunes a BART m
     # then edit HUGGINGFACE_TOKEN and WANDB_API_KEY
     ```
 
-## Data
+## Dataset
 
 The dataset consists of question‑answer pairs scraped from multiple subreddits. Use the helper script to download and preprocess the data:
 
