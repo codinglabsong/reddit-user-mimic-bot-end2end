@@ -94,6 +94,41 @@ For custom prompts:
 bash scripts/run_inference.sh --mode predict --texts "What do you think about politics right now?"
 ```
 
+## Data Preprocessing
+
+1. **Subreddit Selection**  
+   - Chosen subreddits: `r/askscience`, `r/AskHistorians`, `r/ExplainLikeImFive`, `r/AskPhysics`, `r/AskSocialScience`, `r/AskDocs`, `r/AskBiology`, `r/AskEconomics`
+   - Dataset size: 4446 examples
+   - Reasoning: There was high volume of general-interest Q&A, high-quality natural science or social science topics, good language quality across diverse communities. Quality of data had more weight in selecting subreddits rather than a specific domain of focus, as quality data was needed to get better results within a small training round. Diverse subreddits were chosen to prevent the model having a restrictive tone or style.
+
+2. **Post & Comment Filters**  
+    - **Post-level exclusions**  
+        - Skip any non-self posts, link/image posts, removed content, cross-posts, locked threads, stickied or mod-distinguished posts, and “over 18” content.  
+        - Discard posts by `AutoModerator` or with link flairs in `{"announcement","meta","megathread"}`.  
+        - Require `score ≥ 2` and `upvote_ratio ≥ 0.90`.  
+        - De-duplicate by title (case-insensitive), and ensure the combined title+body has ≥ 6 words.  
+    - **Comment-level exclusions**  
+        - Ignore stickied or mod-distinguished comments, any by `AutoModerator`, or comments from the same author as the post.  
+        - Require comment `score ≥ 2` and ≥ 30 words.  
+    - **Top-comment selection**  
+        - Replace “more” comments, then pick the comment maximizing  
+        `quality = score * (word_count ** 0.3)`  
+        to avoid very short or joke-style replies.
+    - **Duplication Prevention**
+        - Drop duplicate Q–A pairs.
+
+3. **Text Cleaning**
+   - Strip HTML/Markdown tags using a parser (BeautifulSoup).  
+   - Remove fenced code blocks matching ```…```.  
+   - Eliminate URLs (`http://` or `https://`) and colon-wrapped emoji codes (e.g. `:smile:`).  
+   - Collapse quoted lines beginning with `>` (including multi-line quotes).  
+   - Remove bot signature footers matching `*I am a bot…*`.  
+   - Replace any sequence of whitespace (spaces, newlines, tabs) with a single space, and trim leading/trailing spaces.  
+
+4. **Train/Val/Test Split**  
+   - 80% train, 10% validation, 10% test.
+   - Save raw dataset, and then create separate CSV files for train, validation, and test.
+
 ## Results
 
 ![Train Loss curves](assets/train_loss.png)
@@ -142,42 +177,8 @@ This project intentionally focused more on the methods and pipeline than the act
 - Train for more epochs.
 - Use a better evaluation metric like RougeL for early stopping.
 
-## Data Preprocessing
-
-1. **Subreddit Selection**  
-   - Chosen subreddits: `r/askscience`, `r/AskHistorians`, `r/ExplainLikeImFive`, `r/AskPhysics`, `r/AskSocialScience`, `r/AskDocs`, `r/AskBiology`, `r/AskEconomics`
-   - Dataset size: 4446 examples
-   - Reasoning: There was high volume of general-interest Q&A, high-quality natural science or social science topics, good language quality across diverse communities. Quality of data had more weight in selecting subreddits rather than a specific domain of focus, as quality data was needed to get better results within a small training round. Diverse subreddits were chosen to prevent the model having a restrictive tone or style.
-
-2. **Post & Comment Filters**  
-    - **Post-level exclusions**  
-        - Skip any non-self posts, link/image posts, removed content, cross-posts, locked threads, stickied or mod-distinguished posts, and “over 18” content.  
-        - Discard posts by `AutoModerator` or with link flairs in `{"announcement","meta","megathread"}`.  
-        - Require `score ≥ 2` and `upvote_ratio ≥ 0.90`.  
-        - De-duplicate by title (case-insensitive), and ensure the combined title+body has ≥ 6 words.  
-    - **Comment-level exclusions**  
-        - Ignore stickied or mod-distinguished comments, any by `AutoModerator`, or comments from the same author as the post.  
-        - Require comment `score ≥ 2` and ≥ 30 words.  
-    - **Top-comment selection**  
-        - Replace “more” comments, then pick the comment maximizing  
-        `quality = score * (word_count ** 0.3)`  
-        to avoid very short or joke-style replies.
-    - **Duplication Prevention**
-        - Drop duplicate Q–A pairs.
-
-3. **Text Cleaning**
-   - Strip HTML/Markdown tags using a parser (BeautifulSoup).  
-   - Remove fenced code blocks matching ```…```.  
-   - Eliminate URLs (`http://` or `https://`) and colon-wrapped emoji codes (e.g. `:smile:`).  
-   - Collapse quoted lines beginning with `>` (including multi-line quotes).  
-   - Remove bot signature footers matching `*I am a bot…*`.  
-   - Replace any sequence of whitespace (spaces, newlines, tabs) with a single space, and trim leading/trailing spaces.  
-
-4. **Train/Val/Test Split**  
-   - 80% train, 10% validation, 10% test.
-   - Save raw dataset, and then create separate CSV files for train, validation, and test.
-
 ## Running the Gradio Inference App
+
 This project includes an interactive Gradio app for making predictions with the trained model.
 
 1. **Obtain the Trained Model:**
@@ -202,6 +203,7 @@ pytest
 ```
 
 ## Hyperparameter Exploration
+
 For systematic hyperparameter exploration, you can use W&B sweeps:
 
 1. Enter your Weights & Biases account entity in sweep.yaml on project root:
