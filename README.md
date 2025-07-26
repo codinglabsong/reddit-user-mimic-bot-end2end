@@ -4,7 +4,7 @@ Reddit User Mimic Bot is an end-to-end Python project that fine‑tunes a BART m
 
 ## Features
 - **LoRA Training** – fine-tune `facebook/bart-base` using Low-Rank Adaptation on scraped Reddit Q&A data.
-- **Data Pipeline** – scripts to scrape Reddit posts with filters for gathering better quality data, preprocess them, split into train/validation/test sets, tokenize and reformat.
+- **Data Pipeline** – scripts to scrape Reddit posts with filters for gathering better quality data, preprocess them, split into train/validation/test sets, tokenize and reformat; leverages data collator for dynamic batching and tensor‑core‑friendly padding.
 - **Hugging Face Integration** – optional model upload to the Hugging Face Hub.
 - **Logging and Experiment Tracking** – train/loss, val/loss tracked via Weights & Biases.
 - **Model Efficiency** – utilize early stopping and Scaled Dot-Product Attention (SDPA) to optimize training efficiency and manage compute resources effectively.
